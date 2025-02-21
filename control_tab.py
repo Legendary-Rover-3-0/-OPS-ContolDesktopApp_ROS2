@@ -1,0 +1,115 @@
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap, QImage, QPalette, QColor
+
+class ControlTab(QWidget):
+    def __init__(self, gamepads, start_reading_callback, toggle_kill_switch_callback, toggle_autonomy_callback):
+        super().__init__()
+        self.gamepads = gamepads
+        self.start_reading_callback = start_reading_callback
+        self.toggle_kill_switch_callback = toggle_kill_switch_callback
+        self.toggle_autonomy_callback = toggle_autonomy_callback
+        self.init_ui()
+
+    def init_ui(self):
+        main_layout = QHBoxLayout()
+
+        # Lewa kolumna: Miejsce na modele robotów 
+        left_column = QVBoxLayout()
+        left_column.addWidget(QLabel('Model Robota 1'))  # Tymczasowy tekst
+        left_column.addWidget(QWidget())  # Tymczasowe puste miejsce
+        left_column.setSpacing(10)
+        left_column.setContentsMargins(10, 10, 10, 10)
+        main_layout.addLayout(left_column, stretch=3)  
+
+        # Środkowa kolumna: Miejsce na modele robotów 
+        middle_column = QVBoxLayout()
+        middle_column.addWidget(QLabel('Model Robota 2'))  # Tymczasowy tekst
+        middle_column.addWidget(QWidget())  # Tymczasowe puste miejsce
+        middle_column.setSpacing(10)
+        middle_column.setContentsMargins(10, 10, 10, 10)
+        main_layout.addLayout(middle_column, stretch=3)
+
+        # Prawa kolumna: Kontrolki i logo
+        right_column = QVBoxLayout()
+
+        # Sekcja wyboru pada
+        gamepad_section = QVBoxLayout()
+        self.label = QLabel('Wybierz pada i naciśnij przycisk, aby wysłać dane przez ROS2')
+        gamepad_section.addWidget(self.label)
+
+        self.gamepad_selector = QComboBox()
+        for i, gamepad in enumerate(self.gamepads):
+            self.gamepad_selector.addItem(gamepad.get_name(), i)
+        gamepad_section.addWidget(self.gamepad_selector)
+
+        self.start_button = QPushButton('Rozpocznij publikowanie')
+        self.start_button.clicked.connect(self.start_reading_callback)
+        self.style_button(self.start_button, '#4CAF50')  # Zielony przycisk
+        gamepad_section.addWidget(self.start_button)
+
+        right_column.addLayout(gamepad_section)
+
+        # Sekcja przycisków sterowania
+        control_buttons = QVBoxLayout()
+        control_buttons.addWidget(QLabel('Sterowanie:'))
+
+        self.kill_switch_button = QPushButton('Kill Switch: OFF')
+        self.kill_switch_button.clicked.connect(self.toggle_kill_switch_callback)
+        self.style_button(self.kill_switch_button, '#FF5733')
+        control_buttons.addWidget(self.kill_switch_button)
+
+        self.autonomy_button = QPushButton('Autonomy: OFF')
+        self.autonomy_button.clicked.connect(self.toggle_autonomy_callback)
+        self.style_button(self.autonomy_button, '#FF5733')
+        control_buttons.addWidget(self.autonomy_button)
+
+        self.extra_button = QPushButton('Extra Button')
+        self.style_button(self.extra_button, '#FF5733')
+        control_buttons.addWidget(self.extra_button)
+
+        right_column.addLayout(control_buttons)
+
+        # Sekcja logo
+        logo_section = QVBoxLayout()
+        logo_label = QLabel()
+        logo_pixmap = QPixmap('logo.png')
+        logo_label.setPixmap(logo_pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio))
+        logo_section.addWidget(logo_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        right_column.addLayout(logo_section)
+
+        right_column.setSpacing(20)
+        right_column.setContentsMargins(10, 10, 10, 10)
+        main_layout.addLayout(right_column, stretch=4)  # 40% szerokości
+
+        self.setLayout(main_layout)
+
+    def update_button_state(self, button, text, state):
+        color = '#2ECC71' if state else '#FF5733'  # Zielony/Czerwony
+        button.setText(f'{text}: {"ON" if state else "OFF"}')
+        self.style_button(button, color)
+
+
+    def style_button(self, button, color):
+        button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color};
+                color: white;
+                font-weight: bold;
+                border: none;
+                padding: 10px;
+                border-radius: 5px;
+            }}
+            QPushButton:hover {{
+                background-color: {self.adjust_color(color, 1.2)};
+            }}
+            QPushButton:pressed {{
+                background-color: {self.adjust_color(color, 0.8)};
+            }}
+        """)
+
+    def adjust_color(self, color, factor):
+        from PyQt6.QtGui import QColor
+        qcolor = QColor(color)
+        return qcolor.lighter(int(100 * factor)).name()
