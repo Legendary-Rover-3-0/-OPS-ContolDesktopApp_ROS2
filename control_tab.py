@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap, QImage, QPalette, QColor
+from PyQt6.QtGui import QPixmap
 
 class ControlTab(QWidget):
     def __init__(self, gamepads, start_reading_callback, toggle_kill_switch_callback, toggle_autonomy_callback):
@@ -14,18 +14,24 @@ class ControlTab(QWidget):
     def init_ui(self):
         main_layout = QHBoxLayout()
 
-        # Lewa kolumna: Miejsce na modele robotów 
+        # Lewa kolumna: Model łazika
         left_column = QVBoxLayout()
-        left_column.addWidget(QLabel('Model Robota 1'))  # Tymczasowy tekst
-        left_column.addWidget(QWidget())  # Tymczasowe puste miejsce
+        rover_label = QLabel()
+        rover_pixmap = QPixmap('rover_image.png')
+        rover_label.setPixmap(rover_pixmap.scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
+        left_column.addWidget(rover_label)
+        left_column.addWidget(QLabel('Model łazika'))
         left_column.setSpacing(10)
         left_column.setContentsMargins(10, 10, 10, 10)
         main_layout.addLayout(left_column, stretch=3)  
 
-        # Środkowa kolumna: Miejsce na modele robotów 
+        # Środkowa kolumna: Model manipulatora
         middle_column = QVBoxLayout()
-        middle_column.addWidget(QLabel('Model Robota 2'))  # Tymczasowy tekst
-        middle_column.addWidget(QWidget())  # Tymczasowe puste miejsce
+        manipulator_label = QLabel()
+        manipulator_pixmap = QPixmap('manipulator_new.png')
+        manipulator_label.setPixmap(manipulator_pixmap.scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
+        middle_column.addWidget(manipulator_label)
+        middle_column.addWidget(QLabel('Model manipulatora'))
         middle_column.setSpacing(10)
         middle_column.setContentsMargins(10, 10, 10, 10)
         main_layout.addLayout(middle_column, stretch=3)
@@ -89,7 +95,6 @@ class ControlTab(QWidget):
         color = '#2ECC71' if state else '#FF5733'  # Zielony/Czerwony
         button.setText(f'{text}: {"ON" if state else "OFF"}')
         self.style_button(button, color)
-
 
     def style_button(self, button, color):
         button.setStyleSheet(f"""
