@@ -3,6 +3,7 @@ import pygame
 import threading
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
 from PyQt6.QtGui import QPixmap, QImage, QPalette, QColor
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtCore import QTimer
 from control_tab import ControlTab
@@ -43,9 +44,17 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.gps_tab, 'GPS')
         self.setCentralWidget(self.tabs)
 
-        for topic in config.CAMERA_TOPICS:  # Użyj tematów z config.py
-            self.ros_node.add_camera_subscription(topic)
+        # Ustawienie QoS dla subskrypcji obrazów
+        qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            durability=QoSDurabilityPolicy.VOLATILE,
+            depth=10
+        )
 
+        for topic in config.CAMERA_TOPICS:
+            self.ros_node.add_camera_subscription(topic, qos_profile)
+
+        # Uruchomienie timera do aktualizacji obrazów
         self.timer = QTimer()
         self.timer.timeout.connect(lambda: rclpy.spin_once(self.ros_node, timeout_sec=0.01))
         self.timer.start(30)
@@ -55,18 +64,8 @@ class MainWindow(QMainWindow):
         self.camera_windows = [None] * 4
 
     def update_image(self, cv_image, idx):
-        height, width, channel = cv_image.shape
-        bytes_per_line = 3 * width
-        q_img = QImage(cv_image.data, width, height, bytes_per_line, QImage.Format.Format_RGB888).rgbSwapped()
-        pixmap = QPixmap.fromImage(q_img)
-        
-        # Skaluj obraz z zachowaniem proporcji
-        scaled_pixmap = pixmap.scaled(self.vision_tab.camera_labels[idx].size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        self.vision_tab.camera_labels[idx].setPixmap(scaled_pixmap)
-        
-        if self.camera_windows[idx]:
-            scaled_pixmap_window = pixmap.scaled(self.camera_windows[idx].label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            self.camera_windows[idx].label.setPixmap(scaled_pixmap_window)
+        # Przekazanie obrazu do VisionTab
+        self.vision_tab.update_image(cv_image, idx)
 
     def toggle_kill_switch(self):
         self.kill_switch_state = 1 - self.kill_switch_state

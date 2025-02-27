@@ -1,3 +1,5 @@
 PyQt6
+folium
 ansible
 pygame
+PyQt6-WebEngine

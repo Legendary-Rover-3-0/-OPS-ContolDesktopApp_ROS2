@@ -16,9 +16,8 @@ class ROSNode(Node):
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         
         self.camera_subscriptions = []
-        self.bridge = CvBridge()
         self.update_image_callback = update_image_callback
-        #self.cmd_vel_callback = cmd_vel_callback  # Callback dla /cmd_vel
+        self.bridge = CvBridge()
 
         # Skalowanie prędkości
         self.max_linear_speed = 1.0  # Maksymalna prędkość liniowa (m/s)
@@ -67,12 +66,13 @@ class ROSNode(Node):
         msg.data = f'KillSwitch:{kill_switch};Autonomy:{autonomy}'
         self.button_publisher.publish(msg)
 
-    def add_camera_subscription(self, topic):
+    def add_camera_subscription(self, topic, qos_profile):
         subscription = self.create_subscription(
-            CompressedImage,  # Zmiana z Image na CompressedImage
+            CompressedImage,
             topic,
             lambda msg, idx=len(self.camera_subscriptions): self.camera_callback(msg, idx),
-            10)
+            qos_profile=qos_profile
+        )
         self.camera_subscriptions.append(subscription)
 
     def camera_callback(self, msg, idx):
