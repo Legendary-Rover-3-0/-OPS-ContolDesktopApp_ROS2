@@ -37,48 +37,80 @@ class StatusTab(QWidget):
         self.group_selector.addItems(["rover_ubiquiti", "rover_wifi"])
         layout.addWidget(QLabel("Wybierz grupę hostów:"))
         layout.addWidget(self.group_selector)
-        
+
         self.label_ports = QLabel("Lista portów szeregowych:")
         self.label_screens = QLabel("Lista aktywnych screenów:")
-        
+
         list_layout = QHBoxLayout()
-        
         self.port_list = QListWidget()
         self.screen_list = QListWidget()
-        
+
         list_layout.addWidget(self.port_list)
         list_layout.addWidget(self.screen_list)
-        
+
         layout.addWidget(self.label_ports)
         layout.addWidget(self.label_screens)
         layout.addLayout(list_layout)
-        
+
         self.refresh_button = QPushButton("Odśwież listę portów")
         self.refresh_button.clicked.connect(self.get_ports)
         layout.addWidget(self.refresh_button)
-        
+
         self.start_screen_button = QPushButton("Uruchom screen dla wybranego portu")
         self.start_screen_button.clicked.connect(self.start_screen)
         layout.addWidget(self.start_screen_button)
-        
+
         self.view_screens_button = QPushButton("Odśwież listę screenów")
         self.view_screens_button.clicked.connect(self.view_screens)
         layout.addWidget(self.view_screens_button)
-        
+
         self.stop_screen_button = QPushButton("Zatrzymaj screen dla wybranego portu")
         self.stop_screen_button.clicked.connect(self.stop_screen)
         layout.addWidget(self.stop_screen_button)
-        
+
         self.fetch_logs_button = QPushButton("Pobierz logi z wybranego screena")
         self.fetch_logs_button.clicked.connect(self.fetch_logs)
         layout.addWidget(self.fetch_logs_button)
-        
+
+        # NOWE PRZYCISKI
+        self.run_vision_script_button = QPushButton("Uruchom skrypt wizji")
+        self.run_vision_script_button.clicked.connect(self.run_vision_script)
+        layout.addWidget(self.run_vision_script_button)
+
+        self.fetch_vision_logs_button = QPushButton("Pobierz logi wizji")
+        self.fetch_vision_logs_button.clicked.connect(self.fetch_vision_logs)
+        layout.addWidget(self.fetch_vision_logs_button)
+
+        self.stop_vision_screen_button = QPushButton("Zatrzymaj proces wizji")
+        self.stop_vision_screen_button.clicked.connect(self.stop_vision_screen)
+        layout.addWidget(self.stop_vision_screen_button)
+
         self.output_area = QTextEdit()
         self.output_area.setReadOnly(True)
         layout.addWidget(self.output_area)
-        
+
         self.setLayout(layout)
         self.setWindowTitle("Zarządzanie agentami")
+
+    def run_vision_script(self):
+        """Uruchamia skrypt wizji na zdalnym hoście."""
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS wizja {config.VISION_SCRIPT}'"
+        )
+
+    def fetch_vision_logs(self):
+        """Pobiera logi z ekranu wizja."""
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S wizja -X hardcopy -h /tmp/wizja_log && tail -n 200 /tmp/wizja_log'",
+            output=self.show_logs
+        )
+
+    def stop_vision_screen(self):
+        """Zatrzymuje proces w ekranie wizja poprzez wysłanie Ctrl+C."""
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S wizja -X stuff \"\\003\"'"
+        )
+
 
     def get_selected_group(self):
         return self.group_selector.currentText()

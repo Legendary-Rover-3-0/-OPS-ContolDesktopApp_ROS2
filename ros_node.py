@@ -68,11 +68,10 @@ class ROSNode(Node):
 
     def add_camera_subscription(self, topic, qos_profile):
         subscription = self.create_subscription(
-            CompressedImage,
+            CompressedImage,  # Zmiana z Image na CompressedImage
             topic,
             lambda msg, idx=len(self.camera_subscriptions): self.camera_callback(msg, idx),
-            qos_profile=qos_profile
-        )
+            10)
         self.camera_subscriptions.append(subscription)
 
     def camera_callback(self, msg, idx):

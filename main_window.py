@@ -3,9 +3,8 @@ import pygame
 import threading
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
 from PyQt6.QtGui import QPixmap, QImage, QPalette, QColor
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtCore import QTimer
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 from control_tab import ControlTab
 from vision_tab import VisionTab, CameraWindow
 from science_tab import ScienceTab
