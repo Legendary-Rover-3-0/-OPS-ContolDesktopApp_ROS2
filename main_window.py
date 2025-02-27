@@ -9,6 +9,7 @@ from control_tab import ControlTab
 from vision_tab import VisionTab, CameraWindow
 from science_tab import ScienceTab
 from status_tab import StatusTab
+from gps_tab import GPSTab
 from ros_node import ROSNode
 import rclpy
 import config
@@ -33,11 +34,13 @@ class MainWindow(QMainWindow):
         self.ros_node = ROSNode(self.update_image)
         self.science_tab = ScienceTab(self.ros_node)
         self.status_tab = StatusTab()
+        self.gps_tab = GPSTab(self.ros_node)
 
         self.tabs.addTab(self.control_tab, 'Sterowanie')
         self.tabs.addTab(self.vision_tab, 'Wizja')
         self.tabs.addTab(self.science_tab, 'Science')
         self.tabs.addTab(self.status_tab, 'Status Jetsona')
+        self.tabs.addTab(self.gps_tab, 'GPS')
         self.setCentralWidget(self.tabs)
 
         for topic in config.CAMERA_TOPICS:  # Użyj tematów z config.py
