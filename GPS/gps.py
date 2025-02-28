@@ -92,7 +92,7 @@ class GPSTab(Node):
         """Handle new GPS data"""
         rover_coords['x'] = msg.latitude
         rover_coords['y'] = msg.longitude
-        print(rover_coords)
+        #print(rover_coords)
 
         # Update the position label in the main Tkinter thread
         self.root.after(0, self.update_position_label)

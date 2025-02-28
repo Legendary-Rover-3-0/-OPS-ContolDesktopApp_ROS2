@@ -9,6 +9,7 @@ from control_tab import ControlTab
 from vision_tab import VisionTab, CameraWindow
 from science_tab import ScienceTab
 from status_tab import StatusTab
+from serva_tab import ServaTab
 from gps_tab import GPSTab
 from ros_node import ROSNode
 import rclpy
@@ -34,6 +35,7 @@ class MainWindow(QMainWindow):
         self.ros_node = ROSNode(self.update_image)
         self.science_tab = ScienceTab(self.ros_node)
         self.status_tab = StatusTab()
+        self.serva_tab = ServaTab(self.ros_node)
         self.gps_tab = GPSTab(self.ros_node)
 
         self.tabs.addTab(self.control_tab, 'Sterowanie')
@@ -41,6 +43,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.science_tab, 'Science')
         self.tabs.addTab(self.status_tab, 'Status Jetsona')
         self.tabs.addTab(self.gps_tab, 'GPS')
+        self.tabs.addTab(self.serva_tab, 'Serva')
         self.setCentralWidget(self.tabs)
 
         # Ustawienie QoS dla subskrypcji obrazów
