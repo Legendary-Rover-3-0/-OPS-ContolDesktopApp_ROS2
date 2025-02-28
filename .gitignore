@@ -1,3 +1,4 @@
 /sensor_data
 /__pycache__
 *.pyc
+GPS/mapa.db
