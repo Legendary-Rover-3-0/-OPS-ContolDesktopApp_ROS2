@@ -11,6 +11,7 @@ from science_tab import ScienceTab
 from status_tab import StatusTab
 from serva_tab import ServaTab
 from gps_tab import GPSTab
+from mani_tab import ManipulatorTab
 from ros_node import ROSNode
 import rclpy
 import config
@@ -35,8 +36,9 @@ class MainWindow(QMainWindow):
         self.ros_node = ROSNode(self.update_image)
         self.science_tab = ScienceTab(self.ros_node)
         self.status_tab = StatusTab()
-        self.serva_tab = ServaTab(self.ros_node)
+        self.serva_tab = ServaTab(self.ros_node, self.gamepads)
         self.gps_tab = GPSTab(self.ros_node)
+        self.mani_tab = ManipulatorTab(self.ros_node, self.gamepads)
 
         self.tabs.addTab(self.control_tab, 'Sterowanie')
         self.tabs.addTab(self.vision_tab, 'Wizja')
@@ -44,6 +46,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.status_tab, 'Status Jetsona')
         self.tabs.addTab(self.gps_tab, 'GPS')
         self.tabs.addTab(self.serva_tab, 'Serva')
+        self.tabs.addTab(self.mani_tab, 'Manipulator')
         self.setCentralWidget(self.tabs)
 
         # Ustawienie QoS dla subskrypcji obrazów
@@ -85,9 +88,10 @@ class MainWindow(QMainWindow):
             self.selected_gamepad = pygame.joystick.Joystick(index)
             self.selected_gamepad.init()
             self.control_tab.label.setText(f'Wybrano: {self.selected_gamepad.get_name()}')
+            self.mani_tab.set_selected_gamepad(self.selected_gamepad)  # Przekazanie wybranego pada do ManipulatorTab
             if self.reading_thread is None or not self.reading_thread.is_alive():
                 self.running = True
-                self.reading_thread = threading.Thread(target=self.read_gamepad, daemon=True)
+                self.reading_thread = threading.Thread(target=self.read_gamepad2, daemon=True)
                 self.reading_thread.start()
                 self.control_tab.style_button(self.control_tab.start_button, '#2ECC71')  # Zielony przycisk po uruchomieniu
 
@@ -97,6 +101,17 @@ class MainWindow(QMainWindow):
             buttons = [self.selected_gamepad.get_button(i) for i in range(self.selected_gamepad.get_numbuttons())]
             axes = [self.selected_gamepad.get_axis(i) for i in range(min(6, self.selected_gamepad.get_numaxes()))]
             self.ros_node.publish_gamepad_input(buttons, axes)
+            pygame.time.wait(50)
+
+    def read_gamepad2(self):
+        while self.running:
+            pygame.event.pump()
+            buttons = [self.selected_gamepad.get_button(i) for i in range(self.selected_gamepad.get_numbuttons())]
+            axes = [self.selected_gamepad.get_axis(i) for i in range(min(6, self.selected_gamepad.get_numaxes()))]
+            hat = self.selected_gamepad.get_hat(0)  # Pobranie wartości D-pad (hat)
+
+            self.ros_node.publish_gamepad_input(buttons, axes, hat)  # Teraz hat jest dodawany do axes
+            
             pygame.time.wait(50)
 
     def open_camera_window(self, idx):

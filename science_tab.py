@@ -1,12 +1,13 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox, QGridLayout
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
-from std_msgs.msg import Int32, Float32MultiArray
+from std_msgs.msg import Int32, Float32MultiArray, Bool
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import os
 import datetime
+
 
 class ScienceTab(QWidget):
     def __init__(self, node: Node):
@@ -71,21 +72,26 @@ class ScienceTab(QWidget):
 
         # Add servo control buttons
         self.buttons_layout = QGridLayout()
-        self.open_buttons = [QPushButton(f'Open Servo {i+1}') for i in range(4)]
+        self.open_buttons = [QPushButton(f'Open Servo {i+1} (50%)') for i in range(4)]
         self.close_buttons = [QPushButton(f'Close Servo {i+1}') for i in range(4)]
+        self.open_full_buttons = [QPushButton(f'Open Servo {i+1} (100%)') for i in range(4)]
 
-        for i, (open_button, close_button) in enumerate(zip(self.open_buttons, self.close_buttons)):
+        for i, (open_button, close_button, open_full_button) in enumerate(zip(self.open_buttons, self.close_buttons, self.open_full_buttons)):
             self.buttons_layout.addWidget(open_button, i, 0)
             self.buttons_layout.addWidget(close_button, i, 1)
+            self.buttons_layout.addWidget(open_full_button, i, 2)
 
         left_column.addLayout(self.buttons_layout)
 
         # Connect buttons to send_command method
         for i, open_button in enumerate(self.open_buttons):
-            open_button.clicked.connect(lambda _, i=i: self.send_command(i, 90.0))
+            open_button.clicked.connect(lambda _, i=i: self.send_command(i, 90.0))  # 50% open (90 degrees)
 
         for i, close_button in enumerate(self.close_buttons):
-            close_button.clicked.connect(lambda _, i=i: self.send_command(i, 0.0))
+            close_button.clicked.connect(lambda _, i=i: self.send_command(i, 0.0))  # Close (0 degrees)
+
+        for i, open_full_button in enumerate(self.open_full_buttons):
+            open_full_button.clicked.connect(lambda _, i=i: self.send_command(i, 180.0))  # 100% open (180 degrees)
 
         # Right column for plots
         right_column = QVBoxLayout()
@@ -109,7 +115,19 @@ class ScienceTab(QWidget):
         self.plot_switch_buttons.addWidget(self.mass_plot_button)
         self.plot_switch_buttons.addWidget(self.soil_moisture_plot_button)
 
+        # Add heater control buttons
+        self.heater_control_buttons = QHBoxLayout()
+        self.heater_on_button = QPushButton('Turn Heater On')
+        self.heater_off_button = QPushButton('Turn Heater Off')
+
+        self.heater_on_button.clicked.connect(lambda: self.send_heater_command(True))
+        self.heater_off_button.clicked.connect(lambda: self.send_heater_command(False))
+
+        self.heater_control_buttons.addWidget(self.heater_on_button)
+        self.heater_control_buttons.addWidget(self.heater_off_button)
+
         right_column.addLayout(self.plot_switch_buttons)
+        right_column.addLayout(self.heater_control_buttons)  # Add heater control buttons
 
         main_layout.addLayout(left_column, 1)
         main_layout.addLayout(right_column, 2)
@@ -147,6 +165,14 @@ class ScienceTab(QWidget):
         self.servo_publishers = [
             self.node.create_publisher(Int32, f'/microros/servo{i+1}_topic', 10) for i in range(4)
         ]
+        # Add publisher for heater control
+        self.heater_publisher = self.node.create_publisher(Bool, '/heater_control', 10)
+
+    def send_heater_command(self, state: bool):
+        msg = Bool()
+        msg.data = state
+        self.heater_publisher.publish(msg)
+        self.node.get_logger().info(f"Heater turned {'on' if state else 'off'}")
 
     def temperature_callback(self, msg: Float32MultiArray):
         self.time_steps += 1
@@ -182,7 +208,7 @@ class ScienceTab(QWidget):
         self.time_steps += 1
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for i, moisture in enumerate(msg.data):
-            self.soil_moisture_labels[i].setText(f'Sensor {i+1} Soil Moisture: \n{moisture:.2f} %')
+            self.soil_moisture_labels[i].setText(f'Sensor {i+1} Soil Moisture: \n{moisture:.2f}')
             self.soil_moisture_history[i].append(moisture)
             if len(self.soil_moisture_history[i]) > self.max_data_points:
                 self.soil_moisture_history[i].pop(0)  # Keep only last N points
@@ -215,7 +241,7 @@ class ScienceTab(QWidget):
             ylabel = "Mass (g)"
         elif self.active_plot == 'soil_moisture':
             data_history = self.soil_moisture_history
-            ylabel = "Soil Moisture (%)"
+            ylabel = "Soil Moisture"
 
         # Plot data for each sensor
         colors = ['r', 'g', 'b', 'm']  # Different colors for each sensor

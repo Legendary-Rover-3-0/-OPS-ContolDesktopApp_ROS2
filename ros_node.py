@@ -33,14 +33,18 @@ class ROSNode(Node):
     #     if self.cmd_vel_callback:
     #         self.cmd_vel_callback(msg)
 
-    def publish_gamepad_input(self, buttons, axes):
+    def publish_gamepad_input(self, buttons, axes, hat=(0, 0)):  
+        hat_x, hat_y = float(hat[0]), float(hat[1])  # Konwersja int -> float
+        axes.extend([hat_x, hat_y])  # Dodanie poprawnych wartości do listy axes
+
         msg = Joy()
-        msg.header.stamp = self.get_clock().now().to_msg()  
-        msg.axes = axes  
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.axes = axes  # Teraz zawiera także hat_x i hat_y jako float
         msg.buttons = buttons  
         self.gamepad_publisher.publish(msg)
-        
-        self.publish_cmd_vel(axes, buttons)  # Automatyczne wysyłanie prędkości
+
+        self.publish_cmd_vel(axes, buttons)  
+
 
     def publish_cmd_vel(self, axes, buttons):
         if len(axes) < 6 or len(buttons) < 6:
