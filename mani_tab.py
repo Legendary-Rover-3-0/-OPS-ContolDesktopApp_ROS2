@@ -107,22 +107,22 @@ class ManipulatorTab(QWidget):
 
             # Mapa przycisków do stopni swobody
             button_mapping = {
-                0: (0, 1),  # Stopień 1
+                0: (0, 1),  # Stopień 1 dół
                 1: (0, -1),
-                2: (1, 1),  # Stopień 2
-                3: (1, -1),
-                6: (2, 1),  # Stopień 3
-                7: (2, -1),
-                9: (3, 1),  # Stopień 4
-                10: (3, -1),
+                2: (4, 1),  # Stopień 5 chwytak obrot
+                3: (4, -1),
+                6: (5, -1),  # Stopień 6 chwytak zacisk
+                7: (5, 1),
+                9: (3, -1),  # Stopień 4 chwytak gora dol
+                10: (3, 1),
             }
 
             # Mapa HAT (krzyżaka) do stopni swobody
             hat_mapping = {
-                (-1, 0): (4, -1),  # Stopień 5
-                (1, 0): (4, 1),
-                (0, -1): (5, -1),  # Stopień 6
-                (0, 1): (5, 1),
+                (-1, 0): (2, 1),  # Stopień 3 gora dol
+                (1, 0): (2, -1),
+                (0, -1): (1, -1),  # Stopień 2 przod tyl
+                (0, 1): (1, 1),
             }
 
             # Odczyt przycisków
