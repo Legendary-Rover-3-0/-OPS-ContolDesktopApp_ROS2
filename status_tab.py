@@ -56,34 +56,63 @@ class StatusTab(QWidget):
         self.refresh_button.clicked.connect(self.get_ports)
         layout.addWidget(self.refresh_button)
 
-        self.start_screen_button = QPushButton("Uruchom screen dla wybranego portu")
-        self.start_screen_button.clicked.connect(self.start_screen)
-        layout.addWidget(self.start_screen_button)
+        #guziki start sceenów
+
+        start_screen_buttons_layout = QHBoxLayout()
+        
+        self.start_drive_screen_button = QPushButton("Uruchom screen Jazdy")
+        self.start_drive_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
+        start_screen_buttons_layout.addWidget(self.start_drive_screen_button)
+
+        self.start_science_screen_button = QPushButton("Uruchom screen Science")
+        self.start_science_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
+        start_screen_buttons_layout.addWidget(self.start_science_screen_button)
+
+        self.start_RFID_screen_button = QPushButton("Uruchom screen RFID")
+        self.start_RFID_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
+        start_screen_buttons_layout.addWidget(self.start_RFID_screen_button)
+
+        layout.addLayout(start_screen_buttons_layout) 
+
+
+        #guziki sceeny
+        screen_buttons_layout = QHBoxLayout()
 
         self.view_screens_button = QPushButton("Odśwież listę screenów")
         self.view_screens_button.clicked.connect(self.view_screens)
-        layout.addWidget(self.view_screens_button)
+        screen_buttons_layout.addWidget(self.view_screens_button)
 
-        self.stop_screen_button = QPushButton("Zatrzymaj screen dla wybranego portu")
+        self.stop_screen_button = QPushButton("Zatrzymaj wybrany screen")
         self.stop_screen_button.clicked.connect(self.stop_screen)
-        layout.addWidget(self.stop_screen_button)
+        screen_buttons_layout.addWidget(self.stop_screen_button)
 
         self.fetch_logs_button = QPushButton("Pobierz logi z wybranego screena")
         self.fetch_logs_button.clicked.connect(self.fetch_logs)
-        layout.addWidget(self.fetch_logs_button)
+        screen_buttons_layout.addWidget(self.fetch_logs_button)
 
-        # NOWE PRZYCISKI
+        self.wipe_dead_button = QPushButton("Usuń martwe procesy")
+        self.wipe_dead_button.clicked.connect(self.wipe_dead_sceens)
+        screen_buttons_layout.addWidget(self.wipe_dead_button)
+
+        layout.addLayout(screen_buttons_layout) 
+
+        # Guziki wizja
+        vision_buttons_layout = QHBoxLayout()
+
         self.run_vision_script_button = QPushButton("Uruchom skrypt wizji")
         self.run_vision_script_button.clicked.connect(self.run_vision_script)
-        layout.addWidget(self.run_vision_script_button)
+        vision_buttons_layout.addWidget(self.run_vision_script_button)
 
         self.fetch_vision_logs_button = QPushButton("Pobierz logi wizji")
         self.fetch_vision_logs_button.clicked.connect(self.fetch_vision_logs)
-        layout.addWidget(self.fetch_vision_logs_button)
+        vision_buttons_layout.addWidget(self.fetch_vision_logs_button)
 
         self.stop_vision_screen_button = QPushButton("Zatrzymaj proces wizji")
         self.stop_vision_screen_button.clicked.connect(self.stop_vision_screen)
-        layout.addWidget(self.stop_vision_screen_button)
+        vision_buttons_layout.addWidget(self.stop_vision_screen_button)
+
+        layout.addLayout(vision_buttons_layout)  # Dodanie poziomego layoutu do głównego layoutu
+
 
         self.output_area = QTextEdit()
         self.output_area.setReadOnly(True)
@@ -118,10 +147,10 @@ class StatusTab(QWidget):
     def get_ports(self):
         self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyS\* -o -name ttyUSB\* -o -name ttyA\* \)'")
 
-    def start_screen(self):
+    def start_screen(self, name_scrypt):
         selected = self.port_list.currentItem()
         if selected:
-            self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS {selected.text().replace('/dev/', '')} {config.AGENT_START_SCRIPT} {selected.text()}'", callback=self.view_screens)
+            self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS {selected.text().replace('/dev/', '')} {name_scrypt} {selected.text()}'", callback=self.view_screens)
 
     def view_screens(self):
         self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -ls'")
@@ -141,7 +170,6 @@ class StatusTab(QWidget):
                 output=self.show_logs
             )
             
-
     def show_logs(self, text):
         dialog = QDialog(self)
         dialog.setWindowTitle(f"Logi agenta")
@@ -158,6 +186,10 @@ class StatusTab(QWidget):
         dialog_layout.addWidget(log_viewer)
         dialog.setLayout(dialog_layout)
         dialog.exec()
+
+    def wipe_dead_sceens(self):
+        self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -wipe'")
+
 
     def cleanup_thread(self, thread, callback):
         if thread in self.threads:

@@ -1,9 +1,9 @@
 import threading
 import pygame
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSlider, QGroupBox
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QGroupBox
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
-from std_msgs.msg import Float64MultiArray  # Zmiana na Float64MultiArray
+from std_msgs.msg import Float64MultiArray, String  # Dodano String dla danych RFID
 
 class ManipulatorTab(QWidget):
     def __init__(self, node: Node, gamepads):
@@ -17,13 +17,17 @@ class ManipulatorTab(QWidget):
         self.current_values = [0.0] * 6  # Zmiana na wartości zmiennoprzecinkowe
         self.sensitivity = 50.0  # Domyślny krok ruchu, regulowany suwakiem
 
+        # Inicjalizacja danych RFID
+        self.rfid_data = "Brak danych"
+
         self.init_ui()
-        self.init_ros_publisher()
+        self.init_ros_publishers()
+        self.init_ros_subscribers()
 
     def init_ui(self):
-        layout = QVBoxLayout()
+        main_layout = QHBoxLayout()  # Główny układ poziomy
 
-        # Grupa dla manipulatora
+        # Kolumna dla manipulatora
         self.mani_group = QGroupBox("Manipulator Control")
         mani_layout = QVBoxLayout()
 
@@ -43,8 +47,19 @@ class ManipulatorTab(QWidget):
         mani_layout.addWidget(self.sensitivity_slider)
 
         self.mani_group.setLayout(mani_layout)
-        layout.addWidget(self.mani_group)
-        self.setLayout(layout)
+        main_layout.addWidget(self.mani_group)
+
+        # Kolumna dla danych RFID
+        self.rfid_group = QGroupBox("RFID Data")
+        rfid_layout = QVBoxLayout()
+
+        self.rfid_label = QLabel(f"RFID: {self.rfid_data}")
+        rfid_layout.addWidget(self.rfid_label)
+
+        self.rfid_group.setLayout(rfid_layout)
+        main_layout.addWidget(self.rfid_group)
+
+        self.setLayout(main_layout)
 
         # Stylizacja UI
         self.setStyleSheet("""
@@ -67,8 +82,15 @@ class ManipulatorTab(QWidget):
             }
         """)
 
-    def init_ros_publisher(self):
+    def init_ros_publishers(self):
         self.publisher = self.node.create_publisher(Float64MultiArray, "/array_topic", 10)  # Zmiana na Float64MultiArray
+
+    def init_ros_subscribers(self):
+        self.rfid_subscriber = self.node.create_subscription(String, "/song_of_seas", self.rfid_callback, 10)
+
+    def rfid_callback(self, msg):
+        self.rfid_data = msg.data
+        self.rfid_label.setText(f"RFID: {self.rfid_data}")
 
     def set_selected_gamepad(self, gamepad):
         self.selected_gamepad = gamepad

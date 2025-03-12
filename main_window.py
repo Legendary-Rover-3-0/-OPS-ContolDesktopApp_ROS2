@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
         self.running = False
 
         self.tabs = QTabWidget()
-        self.control_tab = ControlTab(self.gamepads, self.start_reading, self.toggle_kill_switch, self.toggle_autonomy)
+        self.control_tab = ControlTab(self.gamepads, self.start_reading, self.toggle_kill_switch, self.toggle_autonomy, self.toggle_extra)
         self.vision_tab = VisionTab(self.open_camera_window)
         self.ros_node = ROSNode(self.update_image)
         self.science_tab = ScienceTab(self.ros_node)
@@ -66,6 +66,7 @@ class MainWindow(QMainWindow):
 
         self.kill_switch_state = 0
         self.autonomy_state = 0
+        self.extra_state = 0
         self.camera_windows = [None] * 4
 
     def update_image(self, cv_image, idx):
@@ -74,16 +75,36 @@ class MainWindow(QMainWindow):
 
     def toggle_kill_switch(self):
         self.kill_switch_state = 1 - self.kill_switch_state
+        self.autonomy_state = 0
+        self.extra_state = 0
+        self.control_tab.update_button_state(self.control_tab.extra_button, 'Manual Drive', self.extra_state)
+        self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy Drive', self.autonomy_state)
         self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
-        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state)
+        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.extra_state)
 
     def toggle_autonomy(self):
         self.autonomy_state = 1 - self.autonomy_state
-        self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy', self.autonomy_state)
-        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state)
+        self.kill_switch_state = 0
+        self.extra_state = 0
+        self.control_tab.update_button_state(self.control_tab.extra_button, 'Manual Drive', self.extra_state)
+        self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy Drive', self.autonomy_state)
+        self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
+        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.extra_state)
+
+    def toggle_extra(self):
+        self.extra_state = 1 - self.extra_state
+        self.autonomy_state = 0
+        self.kill_switch_state = 0
+        self.control_tab.update_button_state(self.control_tab.extra_button, 'Manual Drive', self.extra_state)
+        self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy Drive', self.autonomy_state)
+        self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
+        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.extra_state)
 
     def start_reading(self):
         index = self.control_tab.gamepad_selector.currentData()
+        self.extra_state = 1
+        self.control_tab.update_button_state(self.control_tab.extra_button, 'Manual Drive', self.extra_state)
+        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.extra_state)
         if index is not None:
             self.selected_gamepad = pygame.joystick.Joystick(index)
             self.selected_gamepad.init()

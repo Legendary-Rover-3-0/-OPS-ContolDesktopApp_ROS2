@@ -3,12 +3,14 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 
 class ControlTab(QWidget):
-    def __init__(self, gamepads, start_reading_callback, toggle_kill_switch_callback, toggle_autonomy_callback):
+    def __init__(self, gamepads, start_reading_callback, toggle_kill_switch_callback, toggle_autonomy_callback, toggle_extra_callback):
         super().__init__()
         self.gamepads = gamepads
         self.start_reading_callback = start_reading_callback
         self.toggle_kill_switch_callback = toggle_kill_switch_callback
         self.toggle_autonomy_callback = toggle_autonomy_callback
+        self.toggle_extra_callback = toggle_extra_callback
+        
         self.init_ui()
 
     def init_ui(self):
@@ -60,19 +62,22 @@ class ControlTab(QWidget):
         control_buttons = QVBoxLayout()
         control_buttons.addWidget(QLabel('Sterowanie:'))
 
+
+        self.extra_button = QPushButton('Manual Drive: OFF')
+        self.extra_button.clicked.connect(self.toggle_extra_callback)
+        self.style_button(self.extra_button, '#FF5733')
+        control_buttons.addWidget(self.extra_button)
+
+        self.autonomy_button = QPushButton('Autonomy Drive: OFF')
+        self.autonomy_button.clicked.connect(self.toggle_autonomy_callback)
+        self.style_button(self.autonomy_button, '#FF5733')
+        control_buttons.addWidget(self.autonomy_button)
+
         self.kill_switch_button = QPushButton('Kill Switch: OFF')
         self.kill_switch_button.clicked.connect(self.toggle_kill_switch_callback)
         self.style_button(self.kill_switch_button, '#FF5733')
         control_buttons.addWidget(self.kill_switch_button)
 
-        self.autonomy_button = QPushButton('Autonomy: OFF')
-        self.autonomy_button.clicked.connect(self.toggle_autonomy_callback)
-        self.style_button(self.autonomy_button, '#FF5733')
-        control_buttons.addWidget(self.autonomy_button)
-
-        self.extra_button = QPushButton('Extra Button')
-        self.style_button(self.extra_button, '#FF5733')
-        control_buttons.addWidget(self.extra_button)
 
         right_column.addLayout(control_buttons)
 

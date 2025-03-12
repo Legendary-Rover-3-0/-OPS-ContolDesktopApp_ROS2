@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy, CompressedImage
-from std_msgs.msg import String
+from std_msgs.msg import Int8MultiArray
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge
 import cv2
@@ -12,7 +12,7 @@ class ROSNode(Node):
     #def __init__(self, update_image_callback, cmd_vel_callback):
         super().__init__('ros_node')
         self.gamepad_publisher = self.create_publisher(Joy, 'gamepad_input', 10)
-        self.button_publisher = self.create_publisher(String, 'button_states', 10)
+        self.button_publisher = self.create_publisher(Int8MultiArray, 'button_states', 10)
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         
         self.camera_subscriptions = []
@@ -65,9 +65,10 @@ class ROSNode(Node):
 
         self.cmd_vel_publisher.publish(twist_msg)
 
-    def publish_button_states(self, kill_switch, autonomy):
-        msg = String()
-        msg.data = f'KillSwitch:{kill_switch};Autonomy:{autonomy}'
+    def publish_button_states(self, kill_switch, autonomy, extra):
+        msg = Int8MultiArray()
+        #msg.data = f'KillSwitch:{kill_switch};Autonomy:{autonomy};Extra:{extra}'
+        msg.data = [kill_switch, autonomy, extra]
         self.button_publisher.publish(msg)
 
     def add_camera_subscription(self, topic, qos_profile):
