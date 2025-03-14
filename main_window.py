@@ -17,6 +17,14 @@ import rclpy
 import config
 
 class MainWindow(QMainWindow):
+    def closeEvent(self, event):
+        print("Zamykanie aplikacji...")
+        if(self.manual_drive_state == 1):
+            self.manual_drive_state = 0  # Wymuszenie zatrzymania ręcznego trybu jazdy
+            print("Zatrzymywanie lazika, zeby nie zabil kogos lub siebie...")
+            pygame.time.wait(50)
+        event.accept()  # Zamknij aplikację normalnie
+
     def __init__(self):
         super().__init__()
         pygame.init()
