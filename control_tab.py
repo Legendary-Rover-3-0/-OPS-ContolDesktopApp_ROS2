@@ -3,13 +3,12 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 
 class ControlTab(QWidget):
-    def __init__(self, gamepads, start_reading_callback, toggle_kill_switch_callback, toggle_autonomy_callback, toggle_extra_callback):
+    def __init__(self, gamepads, toggle_manual_callback, toggle_kill_switch_callback, toggle_autonomy_callback):
         super().__init__()
         self.gamepads = gamepads
-        self.start_reading_callback = start_reading_callback
         self.toggle_kill_switch_callback = toggle_kill_switch_callback
         self.toggle_autonomy_callback = toggle_autonomy_callback
-        self.toggle_extra_callback = toggle_extra_callback
+        self.toggle_manual_callback = toggle_manual_callback
         
         self.init_ui()
 
@@ -51,11 +50,6 @@ class ControlTab(QWidget):
             self.gamepad_selector.addItem(gamepad.get_name(), i)
         gamepad_section.addWidget(self.gamepad_selector)
 
-        self.start_button = QPushButton('Rozpocznij publikowanie')
-        self.start_button.clicked.connect(self.start_reading_callback)
-        self.style_button(self.start_button, '#4CAF50')  # Zielony przycisk
-        gamepad_section.addWidget(self.start_button)
-
         right_column.addLayout(gamepad_section)
 
         # Sekcja przycisków sterowania
@@ -63,10 +57,10 @@ class ControlTab(QWidget):
         control_buttons.addWidget(QLabel('Sterowanie:'))
 
 
-        self.extra_button = QPushButton('Manual Drive: OFF')
-        self.extra_button.clicked.connect(self.toggle_extra_callback)
-        self.style_button(self.extra_button, '#FF5733')
-        control_buttons.addWidget(self.extra_button)
+        self.manual_drive_button = QPushButton('Manual Drive: OFF')
+        self.manual_drive_button.clicked.connect(self.toggle_manual_callback)
+        self.style_button(self.manual_drive_button, '#FF5733')
+        control_buttons.addWidget(self.manual_drive_button)
 
         self.autonomy_button = QPushButton('Autonomy Drive: OFF')
         self.autonomy_button.clicked.connect(self.toggle_autonomy_callback)

@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
         self.running = False
 
         self.tabs = QTabWidget()
-        self.control_tab = ControlTab(self.gamepads, self.start_reading, self.toggle_kill_switch, self.toggle_autonomy, self.toggle_extra)
+        self.control_tab = ControlTab(self.gamepads, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy)
         self.vision_tab = VisionTab(self.open_camera_window)
         self.ros_node = ROSNode(self.update_image)
         self.science_tab = ScienceTab(self.ros_node)
@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
 
         self.kill_switch_state = 0
         self.autonomy_state = 0
-        self.extra_state = 0
+        self.manual_drive_state = 0
         self.camera_windows = [None] * 4
 
     def update_image(self, cv_image, idx):
@@ -76,35 +76,34 @@ class MainWindow(QMainWindow):
     def toggle_kill_switch(self):
         self.kill_switch_state = 1 - self.kill_switch_state
         self.autonomy_state = 0
-        self.extra_state = 0
-        self.control_tab.update_button_state(self.control_tab.extra_button, 'Manual Drive', self.extra_state)
+        self.manual_drive_state = 0
+        self.control_tab.update_button_state(self.control_tab.manual_drive_button, 'Manual Drive', self.manual_drive_state)
         self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy Drive', self.autonomy_state)
         self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
-        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.extra_state)
+        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.manual_drive_state)
 
     def toggle_autonomy(self):
         self.autonomy_state = 1 - self.autonomy_state
         self.kill_switch_state = 0
-        self.extra_state = 0
-        self.control_tab.update_button_state(self.control_tab.extra_button, 'Manual Drive', self.extra_state)
+        self.manual_drive_state = 0
+        self.control_tab.update_button_state(self.control_tab.manual_drive_button, 'Manual Drive', self.manual_drive_state)
         self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy Drive', self.autonomy_state)
         self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
-        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.extra_state)
+        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.manual_drive_state)
 
-    def toggle_extra(self):
-        self.extra_state = 1 - self.extra_state
-        self.autonomy_state = 0
+    def toggle_manual_callback(self):
+        self.manual_drive_state = 1 - self.manual_drive_state
         self.kill_switch_state = 0
-        self.control_tab.update_button_state(self.control_tab.extra_button, 'Manual Drive', self.extra_state)
+        self.autonomy_state = 0
+        self.control_tab.update_button_state(self.control_tab.manual_drive_button, 'Manual Drive', self.manual_drive_state)
         self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy Drive', self.autonomy_state)
         self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
-        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.extra_state)
-
+        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.manual_drive_state)
+        if self.manual_drive_state == 1:
+            self.start_reading()
+            
     def start_reading(self):
         index = self.control_tab.gamepad_selector.currentData()
-        self.extra_state = 1
-        self.control_tab.update_button_state(self.control_tab.extra_button, 'Manual Drive', self.extra_state)
-        self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.extra_state)
         if index is not None:
             self.selected_gamepad = pygame.joystick.Joystick(index)
             self.selected_gamepad.init()
@@ -112,26 +111,25 @@ class MainWindow(QMainWindow):
             self.mani_tab.set_selected_gamepad(self.selected_gamepad)  # Przekazanie wybranego pada do ManipulatorTab
             if self.reading_thread is None or not self.reading_thread.is_alive():
                 self.running = True
-                self.reading_thread = threading.Thread(target=self.read_gamepad2, daemon=True)
+                self.reading_thread = threading.Thread(target=self.read_gamepad, daemon=True)
                 self.reading_thread.start()
-                self.control_tab.style_button(self.control_tab.start_button, '#2ECC71')  # Zielony przycisk po uruchomieniu
 
     def read_gamepad(self):
         while self.running:
-            pygame.event.pump()
-            buttons = [self.selected_gamepad.get_button(i) for i in range(self.selected_gamepad.get_numbuttons())]
-            axes = [self.selected_gamepad.get_axis(i) for i in range(min(6, self.selected_gamepad.get_numaxes()))]
-            self.ros_node.publish_gamepad_input(buttons, axes)
-            pygame.time.wait(50)
+            if self.manual_drive_state == 0:
+                for _ in range(5):
+                    self.ros_node.publish_empty_gamepad_input()
+                    pygame.time.wait(50)
+                self.running = False
+                return
+            
+            else:
+                pygame.event.pump()
+                buttons = [self.selected_gamepad.get_button(i) for i in range(self.selected_gamepad.get_numbuttons())]
+                axes = [self.selected_gamepad.get_axis(i) for i in range(min(6, self.selected_gamepad.get_numaxes()))]
+                hat = self.selected_gamepad.get_hat(0)  # Pobranie wartości D-pad (hat)
 
-    def read_gamepad2(self):
-        while self.running:
-            pygame.event.pump()
-            buttons = [self.selected_gamepad.get_button(i) for i in range(self.selected_gamepad.get_numbuttons())]
-            axes = [self.selected_gamepad.get_axis(i) for i in range(min(6, self.selected_gamepad.get_numaxes()))]
-            hat = self.selected_gamepad.get_hat(0)  # Pobranie wartości D-pad (hat)
-
-            self.ros_node.publish_gamepad_input(buttons, axes, hat)  # Teraz hat jest dodawany do axes
+                self.ros_node.publish_gamepad_input(buttons, axes, hat)  # Teraz hat jest dodawany do axes
             
             pygame.time.wait(50)
 

@@ -45,8 +45,22 @@ class ROSNode(Node):
 
         self.publish_cmd_vel(axes, buttons)  
 
+    
+    def publish_empty_gamepad_input(self):  
+        msg = Joy()
+        self.gamepad_publisher.publish(msg)
 
-    def publish_cmd_vel(self, axes, buttons):
+        self.publish_cmd_vel()  
+
+
+    def publish_cmd_vel(self, axes=None, buttons=None):
+        if axes is None or buttons is None:
+            twist_msg = Twist()
+            twist_msg.linear.x = 0.0
+            twist_msg.angular.z = 0.0
+            self.cmd_vel_publisher.publish(twist_msg)
+            return
+
         if len(axes) < 6 or len(buttons) < 6:
             self.get_logger().error("Za mało danych z gamepada!")
             return
@@ -65,10 +79,10 @@ class ROSNode(Node):
 
         self.cmd_vel_publisher.publish(twist_msg)
 
-    def publish_button_states(self, kill_switch, autonomy, extra):
+    def publish_button_states(self, kill_switch, autonomy, manual):
         msg = Int8MultiArray()
         #msg.data = f'KillSwitch:{kill_switch};Autonomy:{autonomy};Extra:{extra}'
-        msg.data = [kill_switch, autonomy, extra]
+        msg.data = [kill_switch, autonomy, manual] #TODO: czy zmienic kolejnosc?
         self.button_publisher.publish(msg)
 
     def add_camera_subscription(self, topic, qos_profile):
