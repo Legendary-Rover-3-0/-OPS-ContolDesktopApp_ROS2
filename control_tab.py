@@ -79,7 +79,7 @@ class ControlTab(QWidget):
         logo_section = QVBoxLayout()
         logo_label = QLabel()
         logo_pixmap = QPixmap('logo.png')
-        logo_label.setPixmap(logo_pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio))
+        logo_label.setPixmap(logo_pixmap.scaled(300, 300, Qt.AspectRatioMode.KeepAspectRatio))
         logo_section.addWidget(logo_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
         right_column.addLayout(logo_section)
