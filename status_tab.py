@@ -60,17 +60,25 @@ class StatusTab(QWidget):
 
         start_screen_buttons_layout = QHBoxLayout()
         
-        self.start_drive_screen_button = QPushButton("Uruchom screen Jazdy")
+        self.start_drive_screen_button = QPushButton("Jazda 💨")
         self.start_drive_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
         start_screen_buttons_layout.addWidget(self.start_drive_screen_button)
 
-        self.start_science_screen_button = QPushButton("Uruchom screen Science")
+        self.start_mani_screen_button = QPushButton("Manipulator 🦾")
+        self.start_mani_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
+        start_screen_buttons_layout.addWidget(self.start_mani_screen_button)
+
+        self.start_science_screen_button = QPushButton("Science 🧪")
         self.start_science_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
         start_screen_buttons_layout.addWidget(self.start_science_screen_button)
 
-        self.start_RFID_screen_button = QPushButton("Uruchom screen RFID")
+        self.start_RFID_screen_button = QPushButton("RFID 💳")
         self.start_RFID_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
         start_screen_buttons_layout.addWidget(self.start_RFID_screen_button)
+
+        self.start_GPS_screen_button = QPushButton("GPS 🛰️")
+        self.start_GPS_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
+        start_screen_buttons_layout.addWidget(self.start_GPS_screen_button)
 
         layout.addLayout(start_screen_buttons_layout) 
 

@@ -107,16 +107,25 @@ class MainWindow(QMainWindow):
         self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy Drive', self.autonomy_state)
         self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
         self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.manual_drive_state)
+        
+        # Aktualizacja stanu gamepada w ManiTab i ServaTab
+        self.mani_tab.is_gamepad_active = self.manual_drive_state == 1
+        self.serva_tab.is_gamepad_active = self.manual_drive_state == 1
+        
         if self.manual_drive_state == 1:
             self.start_reading()
-            
+                
     def start_reading(self):
         index = self.control_tab.gamepad_selector.currentData()
         if index is not None:
             self.selected_gamepad = pygame.joystick.Joystick(index)
             self.selected_gamepad.init()
             self.control_tab.label.setText(f'Wybrano: {self.selected_gamepad.get_name()}')
-            self.mani_tab.set_selected_gamepad(self.selected_gamepad)  # Przekazanie wybranego pada do ManipulatorTab
+            
+            # Przekazanie wybranego gamepada do ManiTab i ServaTab
+            self.mani_tab.set_selected_gamepad(self.selected_gamepad)
+            self.serva_tab.set_selected_gamepad(self.selected_gamepad)
+            
             if self.reading_thread is None or not self.reading_thread.is_alive():
                 self.running = True
                 self.reading_thread = threading.Thread(target=self.read_gamepad, daemon=True)
@@ -130,7 +139,6 @@ class MainWindow(QMainWindow):
                     pygame.time.wait(50)
                 self.running = False
                 return
-            
             else:
                 pygame.event.pump()
                 buttons = [self.selected_gamepad.get_button(i) for i in range(self.selected_gamepad.get_numbuttons())]

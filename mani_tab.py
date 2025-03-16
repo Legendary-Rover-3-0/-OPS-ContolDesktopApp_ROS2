@@ -12,6 +12,7 @@ class ManipulatorTab(QWidget):
         self.gamepads = gamepads
         self.selected_gamepad = None
         self.running = False
+        self.is_gamepad_active = False  # Dodana flaga kontrolująca aktywność gamepada
 
         # Inicjalizacja wartości dla 6 stopni swobody
         self.current_values = [0.0] * 6  # Zmiana na wartości zmiennoprzecinkowe
@@ -103,7 +104,8 @@ class ManipulatorTab(QWidget):
 
     def read_gamepad(self):
         while self.running and self.selected_gamepad:
-            pygame.event.pump()
+            if self.is_gamepad_active:  # Sprawdzamy, czy gamepad jest aktywny
+                pygame.event.pump()
 
             # Mapa przycisków do stopni swobody
             button_mapping = {
