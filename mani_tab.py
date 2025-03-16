@@ -32,20 +32,26 @@ class ManipulatorTab(QWidget):
         self.mani_group = QGroupBox("Manipulator Control")
         mani_layout = QVBoxLayout()
 
-        # Etykiety do wyświetlania aktualnego ruchu
-        self.movement_labels = [QLabel(f"Stopień {i+1}: 0.0") for i in range(6)]
-        for label in self.movement_labels:
+        # Inicjalizacja suwaków dla każdego stopnia swobody
+        self.sensitivities = [50.0] * 6  # Domyślnie 50 dla każdego stopnia
+        self.sensitivity_sliders = []
+
+        # Etykiety i suwaki dla każdego stopnia swobody
+        self.movement_labels = []
+        for i in range(6):
+            label = QLabel(f"Stopień {i+1}: 0.0")
+            self.movement_labels.append(label)
             mani_layout.addWidget(label)
 
-        # Suwak do zmiany czułości ruchu
-        self.sensitivity_slider = QSlider(Qt.Orientation.Horizontal)
-        self.sensitivity_slider.setMinimum(1)
-        self.sensitivity_slider.setMaximum(100)
-        self.sensitivity_slider.setValue(int(self.sensitivity))  # Ustawienie wartości początkowej
-        self.sensitivity_slider.valueChanged.connect(self.update_sensitivity)
+            slider = QSlider(Qt.Orientation.Horizontal)
+            slider.setMinimum(1)
+            slider.setMaximum(100)
+            slider.setValue(int(self.sensitivities[i]))  
+            slider.valueChanged.connect(lambda value, idx=i: self.update_sensitivity(idx, value))  # Przekazujemy indeks
 
-        mani_layout.addWidget(QLabel("Czułość ruchu"))
-        mani_layout.addWidget(self.sensitivity_slider)
+            self.sensitivity_sliders.append(slider)
+            mani_layout.addWidget(QLabel(f"Czułość Stopnia {i+1}"))
+            mani_layout.addWidget(slider)
 
         self.mani_group.setLayout(mani_layout)
         main_layout.addWidget(self.mani_group)
@@ -61,6 +67,7 @@ class ManipulatorTab(QWidget):
         main_layout.addWidget(self.rfid_group)
 
         self.setLayout(main_layout)
+
 
         # Stylizacja UI
         self.setStyleSheet("""
@@ -127,26 +134,37 @@ class ManipulatorTab(QWidget):
                 (0, 1): (1, 1),
             }
 
-            # Odczyt przycisków
-            new_values = [0.0] * 6  # Zmiana na wartości zmiennoprzecinkowe
+             # Odczyt przycisków
+            new_values = [0.0] * 6
             for button, (index, direction) in button_mapping.items():
                 if self.selected_gamepad.get_button(button):
-                    new_values[index] = direction * self.sensitivity
+                    new_values[index] += direction * self.sensitivities[index]  # INDYWIDUALNA czułość
 
             # Odczyt HAT (krzyżaka)
             hat = self.selected_gamepad.get_hat(0)
-            if hat in hat_mapping:
-                index, direction = hat_mapping[hat]
-                new_values[index] = direction * self.sensitivity
+
+            # Sprawdzanie osi X
+            if hat[0] == -1:  
+                new_values[2] += self.sensitivities[2]
+            elif hat[0] == 1:  
+                new_values[2] -= self.sensitivities[2]
+
+            # Sprawdzanie osi Y
+            if hat[1] == 1:  
+                new_values[1] += self.sensitivities[1]
+            elif hat[1] == -1:  
+                new_values[1] -= self.sensitivities[1]
 
             # Ograniczenie zakresu wartości
             for i in range(6):
-                new_values[i] = max(-100.0, min(100.0, new_values[i]))  # Zmiana na wartości zmiennoprzecinkowe
+                new_values[i] = max(-100.0, min(100.0, new_values[i]))
 
             # Aktualizacja wartości i publikacja
             self.current_values = new_values
             self.update_ui()
             self.publish_values()
+
+
 
     def update_ui(self):
         for i, value in enumerate(self.current_values):
@@ -157,5 +175,5 @@ class ManipulatorTab(QWidget):
         msg.data = self.current_values
         self.publisher.publish(msg)
 
-    def update_sensitivity(self, value):
-        self.sensitivity = float(value)  # Zmiana na wartość zmiennoprzecinkową
+    def update_sensitivity(self, index, value):
+        self.sensitivities[index] = float(value)  # Aktualizacja konkretnego stopnia
