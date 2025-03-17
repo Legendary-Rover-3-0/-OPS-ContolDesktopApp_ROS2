@@ -8,15 +8,15 @@ import cv2
 import numpy as np
 
 class ROSNode(Node):
-    def __init__(self, update_image_callback):
-    #def __init__(self, update_image_callback, cmd_vel_callback):
+    def __init__(self):
+    #def __init__(self, update_image_callback):
         super().__init__('ros_node')
         self.gamepad_publisher = self.create_publisher(Joy, 'gamepad_input', 10)
         self.button_publisher = self.create_publisher(Int8MultiArray, 'button_states', 10)
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         
-        self.camera_subscriptions = []
-        self.update_image_callback = update_image_callback
+        # self.camera_subscriptions = []
+        # self.update_image_callback = update_image_callback
         self.bridge = CvBridge()
 
         # Skalowanie prędkości
@@ -85,20 +85,20 @@ class ROSNode(Node):
         msg.data = [kill_switch, autonomy, manual] #TODO: czy zmienic kolejnosc?
         self.button_publisher.publish(msg)
 
-    def add_camera_subscription(self, topic, qos_profile):
-        subscription = self.create_subscription(
-            CompressedImage,  # Zmiana z Image na CompressedImage
-            topic,
-            lambda msg, idx=len(self.camera_subscriptions): self.camera_callback(msg, idx),
-            10)
-        self.camera_subscriptions.append(subscription)
+    # def add_camera_subscription(self, topic, qos_profile):
+    #     subscription = self.create_subscription(
+    #         CompressedImage,  # Zmiana z Image na CompressedImage
+    #         topic,
+    #         lambda msg, idx=len(self.camera_subscriptions): self.camera_callback(msg, idx),
+    #         10)
+    #     self.camera_subscriptions.append(subscription)
 
-    def camera_callback(self, msg, idx):
-        try:
-            # Dekodowanie skompresowanego obrazu
-            np_arr = np.frombuffer(msg.data, np.uint8)
-            cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-            if cv_image is not None:
-                self.update_image_callback(cv_image, idx)
-        except Exception as e:
-            self.get_logger().error(f"Błąd dekodowania obrazu: {e}")
+    # def camera_callback(self, msg, idx):
+    #     try:
+    #         # Dekodowanie skompresowanego obrazu
+    #         np_arr = np.frombuffer(msg.data, np.uint8)
+    #         cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    #         if cv_image is not None:
+    #             self.update_image_callback(cv_image, idx)
+    #     except Exception as e:
+    #         self.get_logger().error(f"Błąd dekodowania obrazu: {e}")

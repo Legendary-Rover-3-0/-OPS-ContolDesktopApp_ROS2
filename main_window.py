@@ -6,12 +6,12 @@ from PyQt6.QtGui import QPixmap, QImage, QPalette, QColor
 from PyQt6.QtCore import QTimer, Qt
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 from control_tab import ControlTab
-from vision_tab import VisionTab, CameraWindow
 from science_tab import ScienceTab
 from status_tab import StatusTab
 from serva_tab import ServaTab
 from gps_tab import GPSTab
 from mani_tab import ManipulatorTab
+from gvision_tab import CamerasTab
 from ros_node import ROSNode
 import rclpy
 import config
@@ -40,46 +40,29 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget()
         self.control_tab = ControlTab(self.gamepads, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy)
-        self.vision_tab = VisionTab(self.open_camera_window)
-        self.ros_node = ROSNode(self.update_image)
+        self.ros_node = ROSNode()
         self.science_tab = ScienceTab(self.ros_node)
         self.status_tab = StatusTab()
         self.serva_tab = ServaTab(self.ros_node, self.gamepads)
         self.gps_tab = GPSTab(self.ros_node)
         self.mani_tab = ManipulatorTab(self.ros_node, self.gamepads)
+        self.gvision_tab = CamerasTab()
+
 
         self.tabs.addTab(self.control_tab, 'Sterowanie')
-        self.tabs.addTab(self.vision_tab, 'Wizja')
+        self.tabs.addTab(self.mani_tab, 'Manipulator')
+        self.tabs.addTab(self.gvision_tab, 'Wizja')
         self.tabs.addTab(self.science_tab, 'Science')
         self.tabs.addTab(self.status_tab, 'Status Jetsona')
         self.tabs.addTab(self.gps_tab, 'GPS')
         self.tabs.addTab(self.serva_tab, 'Serva')
-        self.tabs.addTab(self.mani_tab, 'Manipulator')
+
         self.setCentralWidget(self.tabs)
-
-        # Ustawienie QoS dla subskrypcji obrazów
-        qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            durability=QoSDurabilityPolicy.VOLATILE,
-            depth=10
-        )
-
-        for topic in config.CAMERA_TOPICS:
-            self.ros_node.add_camera_subscription(topic, qos_profile)
-
-        # Uruchomienie timera do aktualizacji obrazów
-        self.timer = QTimer()
-        self.timer.timeout.connect(lambda: rclpy.spin_once(self.ros_node, timeout_sec=0.01))
-        self.timer.start(30)
 
         self.kill_switch_state = 0
         self.autonomy_state = 0
         self.manual_drive_state = 0
         self.camera_windows = [None] * 4
-
-    def update_image(self, cv_image, idx):
-        # Przekazanie obrazu do VisionTab
-        self.vision_tab.update_image(cv_image, idx)
 
     def toggle_kill_switch(self):
         self.kill_switch_state = 1 - self.kill_switch_state
@@ -148,9 +131,3 @@ class MainWindow(QMainWindow):
                 self.ros_node.publish_gamepad_input(buttons, axes, hat)  # Teraz hat jest dodawany do axes
             
             pygame.time.wait(50)
-
-    def open_camera_window(self, idx):
-        if self.camera_windows[idx] is None:
-            self.camera_windows[idx] = CameraWindow(self.vision_tab.camera_labels[idx], f'Kamera {idx + 1}')
-        self.camera_windows[idx].show()
-        self.camera_windows[idx].activateWindow()
