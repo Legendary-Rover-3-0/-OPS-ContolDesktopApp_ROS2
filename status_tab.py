@@ -139,31 +139,44 @@ class StatusTab(QWidget):
         # Guziki wizja
         vision_buttons_layout = QHBoxLayout()
 
-        self.run_vision_script_button1 = QPushButton("🎦 Wlacz kamere 1")
+        self.run_vision_script_button1 = QPushButton("🎦 Włącz kamere 1")
         self.run_vision_script_button1.clicked.connect(lambda _: self.run_vision_script(1))
         vision_buttons_layout.addWidget(self.run_vision_script_button1)
 
-        self.run_vision_script_button2 = QPushButton("🎦 Wlacz kamere 2")
+        self.run_vision_script_button2 = QPushButton("🎦 Włącz kamere 2")
         self.run_vision_script_button2.clicked.connect(lambda _: self.run_vision_script(2))
         vision_buttons_layout.addWidget(self.run_vision_script_button2)
 
-        self.run_vision_script_button3 = QPushButton("🎦 Wlacz kamere 3")
+        self.run_vision_script_button3 = QPushButton("🎦 Włącz kamere 3")
         self.run_vision_script_button3.clicked.connect(lambda _: self.run_vision_script(3))
         vision_buttons_layout.addWidget(self.run_vision_script_button3)
 
-        self.run_vision_script_button4 = QPushButton("🎦 Wlacz kamere 4")
+        self.run_vision_script_button4 = QPushButton("🎦 Włącz kamere 4")
         self.run_vision_script_button4.clicked.connect(lambda _: self.run_vision_script(4))
         vision_buttons_layout.addWidget(self.run_vision_script_button4)
 
-        # self.fetch_vision_logs_button = QPushButton("Pobierz logi wizji")
-        # self.fetch_vision_logs_button.clicked.connect(self.fetch_vision_logs)
-        # vision_buttons_layout.addWidget(self.fetch_vision_logs_button)
+        # Guziki stop wizja
+        stop_vision_buttons_layout = QHBoxLayout()
 
-        # self.stop_vision_screen_button = QPushButton("Zatrzymaj proces wizji")
-        # self.stop_vision_screen_button.clicked.connect(self.stop_vision_screen)
-        # vision_buttons_layout.addWidget(self.stop_vision_screen_button)
+        self.stop_vision_script_button1 = QPushButton("❌ Wyłącz kamere 1")
+        self.stop_vision_script_button1.clicked.connect(lambda _: self.stop_vision_script(1))
+        stop_vision_buttons_layout.addWidget(self.stop_vision_script_button1)
+
+        self.stop_vision_script_button2 = QPushButton("❌ Wyłącz kamere 2")
+        self.stop_vision_script_button2.clicked.connect(lambda _: self.stop_vision_script(2))
+        stop_vision_buttons_layout.addWidget(self.stop_vision_script_button2)
+
+        self.stop_vision_script_button3 = QPushButton("❌ Wyłącz kamere 3")
+        self.stop_vision_script_button3.clicked.connect(lambda _: self.stop_vision_script(3))
+        stop_vision_buttons_layout.addWidget(self.stop_vision_script_button3)
+
+        self.stop_vision_script_button4 = QPushButton("❌ Wyłącz kamere 4")
+        self.stop_vision_script_button4.clicked.connect(lambda _: self.stop_vision_script(4))
+        stop_vision_buttons_layout.addWidget(self.stop_vision_script_button4)
+
 
         layout.addLayout(vision_buttons_layout)  # Dodanie poziomego layoutu do głównego layoutu
+        layout.addLayout(stop_vision_buttons_layout)  # Dodanie poziomego layoutu do głównego layoutu
 
 
         self.output_area = QTextEdit()
@@ -186,6 +199,21 @@ class StatusTab(QWidget):
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GStreamer_cam{cam} {commands[cam]}'",
             callback=self.view_screens
         )
+
+    def stop_vision_script(self, cam):
+        """UZatrzymianie skryptu wizji na zdalnym hoście."""
+        commands = {
+            1: config.CAMERA_1_HANDLE,
+            2: config.CAMERA_2_HANDLE,
+            3: config.CAMERA_3_HANDLE,
+            4: config.CAMERA_4_HANDLE,
+        }
+
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'fuser -k {commands[cam]}'",
+            callback=self.view_screens
+        )
+
 
     # def fetch_vision_logs(self):
     #     """Pobiera logi z ekranu wizja."""
