@@ -19,10 +19,14 @@ import config
 class MainWindow(QMainWindow):
     def closeEvent(self, event):
         print("Zamykanie aplikacji...")
-        if(self.manual_drive_state == 1):
+        if self.manual_drive_state == 1:
             self.manual_drive_state = 0  # Wymuszenie zatrzymania ręcznego trybu jazdy
             print("Zatrzymywanie lazika, zeby nie zabil kogos lub siebie...")
             pygame.time.wait(50)
+
+        if config.AUTO_CLOSE_SERVOS_ON_APP_CLOSE:
+            self.science_tab.close_all_servos()
+            
         event.accept()  # Zamknij aplikację normalnie
 
     def __init__(self):

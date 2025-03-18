@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox, QGridLayout
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QPalette
 from rclpy.node import Node
 from std_msgs.msg import Int32, Float32MultiArray, Bool
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -7,13 +8,14 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import os
 import datetime
+import config
 
 
 class ScienceTab(QWidget):
     def __init__(self, node: Node):
         super().__init__()
         self.node = node
-        self.init_ui()
+        
         self.init_ros_subscriptions()
         self.init_ros_publishers()
 
@@ -35,6 +37,11 @@ class ScienceTab(QWidget):
         self.data_directory = "sensor_data"
         if not os.path.exists(self.data_directory):
             os.makedirs(self.data_directory)
+
+        # Servo states list, default all closed.
+        self.servo_states = [0] * 4 
+
+        self.init_ui()
 
     def init_ui(self):
         main_layout = QHBoxLayout()
@@ -85,13 +92,20 @@ class ScienceTab(QWidget):
 
         # Connect buttons to send_command method
         for i, open_button in enumerate(self.open_buttons):
-            open_button.clicked.connect(lambda _, i=i: self.send_command(i, 90.0))  # 50% open (90 degrees)
+            open_button.clicked.connect(lambda _, i=i: self.send_command(i, config.SERVO_OPEN_ANGLE))  # 50% open (90 degrees)
 
         for i, close_button in enumerate(self.close_buttons):
-            close_button.clicked.connect(lambda _, i=i: self.send_command(i, 0.0))  # Close (0 degrees)
+            close_button.clicked.connect(lambda _, i=i: self.send_command(i, config.SERVO_CLOSED_ANGLE))  # Close (0 degrees)
 
         for i, open_full_button in enumerate(self.open_full_buttons):
-            open_full_button.clicked.connect(lambda _, i=i: self.send_command(i, 180.0))  # 100% open (180 degrees)
+            open_full_button.clicked.connect(lambda _, i=i: self.send_command(i, config.SERVO_FULL_OPEN_ANGLE))  # 100% open (180 degrees)
+
+        #zamkniecie serv przy uruchomieniu aplikacji
+        if config.AUTO_CLOSE_SERVOS_ON_APP_START:
+            self.close_all_servos()
+        else:
+            for index, _ in enumerate(self.close_buttons):
+                self.update_servo_state(index, config.SERVO_CLOSED_ANGLE)
 
         # Right column for plots
         right_column = QVBoxLayout()
@@ -178,6 +192,7 @@ class ScienceTab(QWidget):
         self.time_steps += 1
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for i, temperature in enumerate(msg.data):
+            temperature = -temperature
             self.temperature_labels[i].setText(f'Sensor {i+1} Temperature: \n {temperature:.2f} °C')
             self.temperature_history[i].append(temperature)
             if len(self.temperature_history[i]) > self.max_data_points:
@@ -255,6 +270,38 @@ class ScienceTab(QWidget):
         self.plot_canvas.draw()
 
     def send_command(self, index, value):
+        self.update_servo_state(index, value)
         msg = Int32()
         msg.data = int(value)
         self.servo_publishers[index].publish(msg)
+
+    def update_servo_state(self, index, value):
+        # update states list
+        self.servo_states[index] = value
+        
+        # update buttons
+        if value == config.SERVO_OPEN_ANGLE: #50% - 90
+            self.update_button_style(self.open_buttons[index], config.BUTTON_ON_COLOR)
+            self.update_button_style(self.close_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.open_full_buttons[index], config.BUTTON_DEFAULT_COLOR)
+        elif value == config.SERVO_CLOSED_ANGLE: # 0% - 0
+            self.update_button_style(self.open_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.close_buttons[index], config.BUTTON_OFF_COLOR)
+            self.update_button_style(self.open_full_buttons[index], config.BUTTON_DEFAULT_COLOR)
+        elif value == config.SERVO_FULL_OPEN_ANGLE: #100% - 180
+            self.update_button_style(self.open_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.close_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.open_full_buttons[index], config.BUTTON_ON_COLOR)
+
+    def update_button_style(self, button, color):
+        # color = QColor(color)
+        # palette = button.palette()
+        # palette.setColor(QPalette.ColorRole.Button, color)
+        # button.setAutoFillBackground(True)
+        # button.setPalette(palette)
+        button.setStyleSheet(f"background-color: {color}")
+        button.update()
+
+    def close_all_servos(self):
+        for button in self.close_buttons:
+            button.click()
