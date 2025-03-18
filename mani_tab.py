@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, 
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
 from std_msgs.msg import Float64MultiArray, String  # Dodano String dla danych RFID
+from geometry_msgs.msg import Twist
+
 
 class ManipulatorTab(QWidget):
     def __init__(self, node: Node, gamepads):
@@ -91,7 +93,8 @@ class ManipulatorTab(QWidget):
         """)
 
     def init_ros_publishers(self):
-        self.publisher = self.node.create_publisher(Float64MultiArray, "/array_topic", 10)  # Zmiana na Float64MultiArray
+        self.publisher = self.node.create_publisher(Twist, "/array_topic", 10)
+
 
     def init_ros_subscribers(self):
         self.rfid_subscriber = self.node.create_subscription(String, "/song_of_seas", self.rfid_callback, 10)
@@ -171,9 +174,25 @@ class ManipulatorTab(QWidget):
             self.movement_labels[i].setText(f"Stopień {i+1}: {value:.2f}")  # Formatowanie do dwóch miejsc po przecinku
 
     def publish_values(self):
-        msg = Float64MultiArray()  # Zmiana na Float64MultiArray
-        msg.data = self.current_values
+        msg = Twist()
+        
+        # Załóżmy, że np. wartości przypisujemy tak:
+        # Stopień 1 -> linear.x
+        # Stopień 2 -> linear.y
+        # Stopień 3 -> linear.z
+        # Stopień 4 -> angular.x
+        # Stopień 5 -> angular.y
+        # Stopień 6 -> angular.z
+
+        msg.linear.x = self.current_values[0] / 100.0
+        msg.linear.y = self.current_values[1] / 100.0
+        msg.linear.z = self.current_values[2] / 100.0
+        msg.angular.x = self.current_values[3] / 100.0
+        msg.angular.y = self.current_values[4] / 100.0
+        msg.angular.z = self.current_values[5] / 100.0
+
         self.publisher.publish(msg)
+
 
     def update_sensitivity(self, index, value):
         self.sensitivities[index] = float(value)  # Aktualizacja konkretnego stopnia
