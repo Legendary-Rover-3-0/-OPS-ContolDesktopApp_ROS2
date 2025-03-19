@@ -5,6 +5,7 @@ from PyQt6.QtCore import Qt
 from rclpy.node import Node
 from std_msgs.msg import String  # Dodano String dla danych RFID
 from geometry_msgs.msg import Twist
+import config
 
 
 class ManipulatorTab(QWidget):
@@ -18,7 +19,7 @@ class ManipulatorTab(QWidget):
 
         # Inicjalizacja wartości dla 6 stopni swobody
         self.current_values = [0.0] * 6  # Zmiana na wartości zmiennoprzecinkowe
-        self.sensitivity = 50.0  # Domyślny krok ruchu, regulowany suwakiem
+        self.sensitivity = config.MANI_DEFAULT_VALUE  # Domyślny krok ruchu, regulowany suwakiem
 
         # Inicjalizacja danych RFID
         self.rfid_data = "Brak danych"
@@ -35,7 +36,7 @@ class ManipulatorTab(QWidget):
         mani_layout = QVBoxLayout()
 
         # Inicjalizacja suwaków dla każdego stopnia swobody
-        self.sensitivities = [50.0] * 6  # Domyślnie 50 dla każdego stopnia
+        self.sensitivities = [config.MANI_DEFAULT_VALUE] * 6  # Domyślnie 50 dla każdego stopnia
         self.sensitivity_sliders = []
 
         # Etykiety i suwaki dla każdego stopnia swobody

@@ -13,8 +13,11 @@ ANSIBLE_INVENTORY = "ansible_inventory.ini"
 AGENT_START_SCRIPT = "/home/legendary/kubatk/drive.sh" # skrypt musi pobierać 1 parametr (np: /dev/ttyUSB0)
 VISION_SCRIPT = "/home/legendary/kubatk/vision.sh"
 
+# Manipulator
+MANI_DEFAULT_VALUE = 80.0
+
 # Wizja
-CAM_RECIVER_IP = "192.168.2.98"
+CAM_RECIVER_IP = "192.168.2.10"
 
 CAMERA_1_HANDLE = "/dev/video0"
 CAMERA_2_HANDLE = "/dev/video2"
