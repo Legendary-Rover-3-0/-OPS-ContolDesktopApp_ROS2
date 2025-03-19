@@ -194,6 +194,9 @@ class ManipulatorTab(QWidget):
 
         self.publisher.publish(msg)
 
+    def publish_empty_values(self):
+        msg = Twist()
+        self.publisher.publish(msg)
 
     def update_sensitivity(self, index, value):
         self.sensitivities[index] = float(value)  # Aktualizacja konkretnego stopnia

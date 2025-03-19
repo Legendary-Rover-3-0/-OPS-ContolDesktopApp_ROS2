@@ -12,7 +12,7 @@ class ROSNode(Node):
     #def __init__(self, update_image_callback):
         super().__init__('ros_node')
         self.gamepad_publisher = self.create_publisher(Joy, 'gamepad_input', 10)
-        self.button_publisher = self.create_publisher(Int8MultiArray, 'button_states', 10)
+        self.button_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/led_state_topic', 10)
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10)
         
         # self.camera_subscriptions = []
@@ -82,7 +82,7 @@ class ROSNode(Node):
     def publish_button_states(self, kill_switch, autonomy, manual):
         msg = Int8MultiArray()
         #msg.data = f'KillSwitch:{kill_switch};Autonomy:{autonomy};Extra:{extra}'
-        msg.data = [kill_switch, autonomy, manual] #TODO: czy zmienic kolejnosc?
+        msg.data = [manual, autonomy, kill_switch] #TODO: czy zmienic kolejnosc?
         self.button_publisher.publish(msg)
 
     # def add_camera_subscription(self, topic, qos_profile):
