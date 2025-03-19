@@ -39,7 +39,8 @@ class ScienceTab(QWidget):
             os.makedirs(self.data_directory)
 
         # Servo states list, default all closed.
-        self.servo_states = [0] * 4 
+        self.servo_states = [0] * 4
+        self.heater_state = 0
 
         self.init_ui()
 
@@ -136,6 +137,7 @@ class ScienceTab(QWidget):
 
         self.heater_on_button.clicked.connect(lambda: self.send_heater_command(True))
         self.heater_off_button.clicked.connect(lambda: self.send_heater_command(False))
+        self.update_button_style(self.heater_off_button, config.BUTTON_OFF_COLOR)
 
         self.heater_control_buttons.addWidget(self.heater_on_button)
         self.heater_control_buttons.addWidget(self.heater_off_button)
@@ -187,6 +189,8 @@ class ScienceTab(QWidget):
         msg.data = state
         self.heater_publisher.publish(msg)
         self.node.get_logger().info(f"Heater turned {'on' if state else 'off'}")
+        self.update_button_style(self.heater_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.heater_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
 
     def temperature_callback(self, msg: Float32MultiArray):
         self.time_steps += 1
@@ -235,6 +239,16 @@ class ScienceTab(QWidget):
         self.update_plots_if_needed()
 
     def set_active_plot(self, plot_type):
+        self.update_button_style(self.temperature_plot_button, config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.mass_plot_button, config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.soil_moisture_plot_button, config.BUTTON_DEFAULT_COLOR)
+        if plot_type == "temperature":
+            self.update_button_style(self.temperature_plot_button, config.BUTTON_SELECTED_COLOR)
+        elif plot_type == "mass":
+            self.update_button_style(self.mass_plot_button, config.BUTTON_SELECTED_COLOR)
+        elif plot_type == "soil_moisture":
+            self.update_button_style(self.soil_moisture_plot_button, config.BUTTON_SELECTED_COLOR)
+
         self.active_plot = plot_type
         self.update_plot()
 

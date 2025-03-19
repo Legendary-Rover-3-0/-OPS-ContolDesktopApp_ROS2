@@ -6,6 +6,7 @@ BUTTON_TOPIC = 'button_states'
 BUTTON_ON_COLOR = "green"
 BUTTON_OFF_COLOR = "red"
 BUTTON_DEFAULT_COLOR = "dark gray"
+BUTTON_SELECTED_COLOR = "blue"
 
 # Konfiguracja agentów
 ANSIBLE_INVENTORY = "ansible_inventory.ini"
