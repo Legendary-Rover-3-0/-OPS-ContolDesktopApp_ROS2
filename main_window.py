@@ -82,6 +82,10 @@ class MainWindow(QMainWindow):
         self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
         self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.manual_drive_state)
 
+        #Aktualizacja stanu gamepada w ManiTab i ServaTab
+        self.mani_tab.is_gamepad_active = self.manual_drive_state == 1
+        self.serva_tab.is_gamepad_active = self.manual_drive_state == 1
+
     def toggle_autonomy(self):
         self.autonomy_state = 1 - self.autonomy_state
         self.kill_switch_state = 0
@@ -90,6 +94,10 @@ class MainWindow(QMainWindow):
         self.control_tab.update_button_state(self.control_tab.autonomy_button, 'Autonomy Drive', self.autonomy_state)
         self.control_tab.update_button_state(self.control_tab.kill_switch_button, 'Kill Switch', self.kill_switch_state)
         self.ros_node.publish_button_states(self.kill_switch_state, self.autonomy_state, self.manual_drive_state)
+
+        # Aktualizacja stanu gamepada w ManiTab i ServaTab
+        self.mani_tab.is_gamepad_active = self.manual_drive_state == 1
+        self.serva_tab.is_gamepad_active = self.manual_drive_state == 1
 
     def toggle_manual_callback(self):
         self.manual_drive_state = 1 - self.manual_drive_state
@@ -128,6 +136,7 @@ class MainWindow(QMainWindow):
             if self.manual_drive_state == 0:
                 for _ in range(5):
                     self.ros_node.publish_empty_gamepad_input()
+                    self.mani_tab.publish_empty_values()
                     pygame.time.wait(50)
                 self.running = False
                 return
