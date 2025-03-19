@@ -13,7 +13,7 @@ class ROSNode(Node):
         super().__init__('ros_node')
         self.gamepad_publisher = self.create_publisher(Joy, 'gamepad_input', 10)
         self.button_publisher = self.create_publisher(Int8MultiArray, 'button_states', 10)
-        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10)
         
         # self.camera_subscriptions = []
         # self.update_image_callback = update_image_callback

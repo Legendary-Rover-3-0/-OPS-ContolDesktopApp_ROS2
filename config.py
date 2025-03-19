@@ -9,7 +9,7 @@ BUTTON_DEFAULT_COLOR = "dark gray"
 
 # Konfiguracja agentów
 ANSIBLE_INVENTORY = "ansible_inventory.ini"
-AGENT_START_SCRIPT = "/home/legendary/kubatk/test.sh" # skrypt musi pobierać 1 parametr (np: /dev/ttyUSB0)
+AGENT_START_SCRIPT = "/home/legendary/kubatk/drive.sh" # skrypt musi pobierać 1 parametr (np: /dev/ttyUSB0)
 VISION_SCRIPT = "/home/legendary/kubatk/vision.sh"
 
 # Wizja
