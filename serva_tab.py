@@ -106,13 +106,13 @@ class ServaTab(QWidget):
     
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_W:
-            self.adjust_servo_position(0, self.step_values[0])
+            self.adjust_servo_position(1, self.step_values[0])
         elif event.key() == Qt.Key.Key_S:
-            self.adjust_servo_position(0, -self.step_values[0])
+            self.adjust_servo_position(1, -self.step_values[0])
         elif event.key() == Qt.Key.Key_A:
-            self.adjust_servo_position(1, self.step_values[1])
+            self.adjust_servo_position(0, self.step_values[1])
         elif event.key() == Qt.Key.Key_D:
-            self.adjust_servo_position(1, -self.step_values[1])
+            self.adjust_servo_position(0, -self.step_values[1])
 
     def closeEvent(self, event):
         self.running = False

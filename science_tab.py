@@ -2,13 +2,12 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButt
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette
 from rclpy.node import Node
-from std_msgs.msg import Int32, Float32MultiArray, Bool
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+from std_msgs.msg import Int32, Float32MultiArray, Int8MultiArray
 import os
 import datetime
 import config
+from PyQt6.QtWidgets import QApplication  # Dodaj ten import na początku pliku
+import subprocess
 
 
 class ScienceTab(QWidget):
@@ -30,9 +29,6 @@ class ScienceTab(QWidget):
         self.update_interval = 5  # Update plots every 5 new data points
         self.update_counter = 0
 
-        # Current active plot
-        self.active_plot = 'temperature'  # Default to temperature plot
-
         # Create a directory for saving data files
         self.data_directory = "sensor_data"
         if not os.path.exists(self.data_directory):
@@ -40,6 +36,7 @@ class ScienceTab(QWidget):
 
         # Servo states list, default all closed.
         self.servo_states = [0] * 4
+        self.drill_state = 0
         self.heater_state = 0
 
         self.init_ui()
@@ -74,6 +71,11 @@ class ScienceTab(QWidget):
         self.mass_group.setLayout(self.mass_layout)
         self.soil_moisture_group.setLayout(self.soil_moisture_layout)
 
+        # Dodaj przycisk do uruchamiania aplikacji z wykresami
+        self.plot_app_button = QPushButton('Open Plot App')
+        self.plot_app_button.clicked.connect(self.launch_plot_app)
+        left_column.addWidget(self.plot_app_button)
+
         left_column.addWidget(self.temperature_group)
         left_column.addWidget(self.mass_group)
         left_column.addWidget(self.soil_moisture_group)
@@ -101,34 +103,12 @@ class ScienceTab(QWidget):
         for i, open_full_button in enumerate(self.open_full_buttons):
             open_full_button.clicked.connect(lambda _, i=i: self.send_command(i, config.SERVO_FULL_OPEN_ANGLE))  # 100% open (180 degrees)
 
-        #zamkniecie serv przy uruchomieniu aplikacji
+        # zamknięcie servo przy uruchomieniu aplikacji
         if config.AUTO_CLOSE_SERVOS_ON_APP_START:
             self.close_all_servos()
         else:
             for index, _ in enumerate(self.close_buttons):
                 self.update_servo_state(index, config.SERVO_CLOSED_ANGLE)
-
-        # Right column for plots
-        right_column = QVBoxLayout()
-
-        # Create matplotlib figure and canvas
-        self.plot_figure = Figure()
-        self.plot_canvas = FigureCanvas(self.plot_figure)
-        right_column.addWidget(self.plot_canvas)
-
-        # Add buttons to switch between plots
-        self.plot_switch_buttons = QHBoxLayout()
-        self.temperature_plot_button = QPushButton('Temperature Plot')
-        self.mass_plot_button = QPushButton('Mass Plot')
-        self.soil_moisture_plot_button = QPushButton('Soil Moisture Plot')
-
-        self.temperature_plot_button.clicked.connect(lambda: self.set_active_plot('temperature'))
-        self.mass_plot_button.clicked.connect(lambda: self.set_active_plot('mass'))
-        self.soil_moisture_plot_button.clicked.connect(lambda: self.set_active_plot('soil_moisture'))
-
-        self.plot_switch_buttons.addWidget(self.temperature_plot_button)
-        self.plot_switch_buttons.addWidget(self.mass_plot_button)
-        self.plot_switch_buttons.addWidget(self.soil_moisture_plot_button)
 
         # Add heater control buttons
         self.heater_control_buttons = QHBoxLayout()
@@ -142,11 +122,22 @@ class ScienceTab(QWidget):
         self.heater_control_buttons.addWidget(self.heater_on_button)
         self.heater_control_buttons.addWidget(self.heater_off_button)
 
-        right_column.addLayout(self.plot_switch_buttons)
-        right_column.addLayout(self.heater_control_buttons)  # Add heater control buttons
+        # Add wiertło buttons
+        self.wiertlo_buttons = QHBoxLayout()
+        self.wiertlo_on_button = QPushButton('Wiertło On')
+        self.wiertlo_off_button = QPushButton('Wiertło Off')
+
+        self.wiertlo_on_button.clicked.connect(lambda: self.send_wiertlo_command(True))
+        self.wiertlo_off_button.clicked.connect(lambda: self.send_wiertlo_command(False))
+        self.update_button_style(self.wiertlo_off_button, config.BUTTON_OFF_COLOR)
+
+        self.wiertlo_buttons.addWidget(self.wiertlo_on_button)
+        self.wiertlo_buttons.addWidget(self.wiertlo_off_button)
+
+        left_column.addLayout(self.heater_control_buttons)  # Add heater control buttons
+        left_column.addLayout(self.wiertlo_buttons)  # Add wiertło control buttons
 
         main_layout.addLayout(left_column, 1)
-        main_layout.addLayout(right_column, 2)
 
         self.setLayout(main_layout)
 
@@ -181,16 +172,24 @@ class ScienceTab(QWidget):
         self.servo_publishers = [
             self.node.create_publisher(Int32, f'/microros/servo{i+1}_topic', 10) for i in range(4)
         ]
-        # Add publisher for heater control
-        self.heater_publisher = self.node.create_publisher(Bool, '/heater_control', 10)
+        # Change publisher to Int8MultiArray for output_state_topic
+        self.heater_publisher = self.node.create_publisher(Int8MultiArray, '/ESP32_GIZ/output_state_topic', 10)
 
     def send_heater_command(self, state: bool):
-        msg = Bool()
-        msg.data = state
+        self.heater_state = int(state)
+        msg = Int8MultiArray()
+        msg.data = [self.drill_state, self.heater_state, 0]  # First state: heater, second state: wiertło, third state: reserved
         self.heater_publisher.publish(msg)
-        self.node.get_logger().info(f"Heater turned {'on' if state else 'off'}")
         self.update_button_style(self.heater_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.heater_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
+
+    def send_wiertlo_command(self, state: bool):
+        self.drill_state = int(state)
+        msg = Int8MultiArray()
+        msg.data = [self.drill_state, self.heater_state, 0]  # First state: heater, second state: wiertło, third state: reserved
+        self.heater_publisher.publish(msg)
+        self.update_button_style(self.wiertlo_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.wiertlo_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
 
     def temperature_callback(self, msg: Float32MultiArray):
         self.time_steps += 1
@@ -198,90 +197,30 @@ class ScienceTab(QWidget):
         for i, temperature in enumerate(msg.data):
             temperature = -temperature
             self.temperature_labels[i].setText(f'Sensor {i+1} Temperature: \n {temperature:.2f} °C')
-            self.temperature_history[i].append(temperature)
-            if len(self.temperature_history[i]) > self.max_data_points:
-                self.temperature_history[i].pop(0)  # Keep only last N points
 
             # Save temperature data to file
             with open(f"{self.data_directory}/temperature_sensor_{i+1}.txt", "a") as file:
                 file.write(f"{timestamp}, {temperature:.2f}\n")
-
-        self.update_plots_if_needed()
 
     def mass_callback(self, msg: Float32MultiArray):
         self.time_steps += 1
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for i, mass in enumerate(msg.data):
             self.mass_labels[i].setText(f'Sensor {i+1} Mass: \n{mass:.2f} g')
-            self.mass_history[i].append(mass)
-            if len(self.mass_history[i]) > self.max_data_points:
-                self.mass_history[i].pop(0)  # Keep only last N points
 
             # Save mass data to file
             with open(f"{self.data_directory}/mass_sensor_{i+1}.txt", "a") as file:
                 file.write(f"{timestamp}, {mass:.2f}\n")
-
-        self.update_plots_if_needed()
 
     def soil_moisture_callback(self, msg: Float32MultiArray):
         self.time_steps += 1
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for i, moisture in enumerate(msg.data):
             self.soil_moisture_labels[i].setText(f'Sensor {i+1} Soil Moisture: \n{moisture:.2f}')
-            self.soil_moisture_history[i].append(moisture)
-            if len(self.soil_moisture_history[i]) > self.max_data_points:
-                self.soil_moisture_history[i].pop(0)  # Keep only last N points
 
             # Save soil moisture data to file
             with open(f"{self.data_directory}/soil_moisture_sensor_{i+1}.txt", "a") as file:
                 file.write(f"{timestamp}, {moisture:.2f}\n")
-
-        self.update_plots_if_needed()
-
-    def set_active_plot(self, plot_type):
-        self.update_button_style(self.temperature_plot_button, config.BUTTON_DEFAULT_COLOR)
-        self.update_button_style(self.mass_plot_button, config.BUTTON_DEFAULT_COLOR)
-        self.update_button_style(self.soil_moisture_plot_button, config.BUTTON_DEFAULT_COLOR)
-        if plot_type == "temperature":
-            self.update_button_style(self.temperature_plot_button, config.BUTTON_SELECTED_COLOR)
-        elif plot_type == "mass":
-            self.update_button_style(self.mass_plot_button, config.BUTTON_SELECTED_COLOR)
-        elif plot_type == "soil_moisture":
-            self.update_button_style(self.soil_moisture_plot_button, config.BUTTON_SELECTED_COLOR)
-
-        self.active_plot = plot_type
-        self.update_plot()
-
-    def update_plots_if_needed(self):
-        self.update_counter += 1
-        if self.update_counter >= self.update_interval:
-            self.update_plot()
-            self.update_counter = 0  # Reset counter
-
-    def update_plot(self):
-        self.plot_figure.clear()
-        ax = self.plot_figure.add_subplot(111)
-
-        if self.active_plot == 'temperature':
-            data_history = self.temperature_history
-            ylabel = "Temperature (°C)"
-        elif self.active_plot == 'mass':
-            data_history = self.mass_history
-            ylabel = "Mass (g)"
-        elif self.active_plot == 'soil_moisture':
-            data_history = self.soil_moisture_history
-            ylabel = "Soil Moisture"
-
-        # Plot data for each sensor
-        colors = ['r', 'g', 'b', 'm']  # Different colors for each sensor
-        for i in range(4):
-            ax.plot(range(len(data_history[i])), data_history[i], color=colors[i], label=f'Sensor {i+1}')
-
-        ax.set_ylabel(ylabel)
-        ax.set_xlabel("Time Steps")
-        ax.legend(loc='upper right')
-        ax.grid(True)
-        self.plot_canvas.draw()
 
     def send_command(self, index, value):
         self.update_servo_state(index, value)
@@ -308,14 +247,12 @@ class ScienceTab(QWidget):
             self.update_button_style(self.open_full_buttons[index], config.BUTTON_ON_COLOR)
 
     def update_button_style(self, button, color):
-        # color = QColor(color)
-        # palette = button.palette()
-        # palette.setColor(QPalette.ColorRole.Button, color)
-        # button.setAutoFillBackground(True)
-        # button.setPalette(palette)
         button.setStyleSheet(f"background-color: {color}")
         button.update()
 
     def close_all_servos(self):
         for button in self.close_buttons:
             button.click()
+
+    def launch_plot_app(self):
+        subprocess.Popen(["python3", "wykresy.py"])  # Uruchom nową aplikację
