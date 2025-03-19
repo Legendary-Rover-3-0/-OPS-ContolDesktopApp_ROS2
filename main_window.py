@@ -63,6 +63,11 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(self.tabs)
 
+        # Uruchomienie timera do aktualizacji obrazów
+        self.timer = QTimer()
+        self.timer.timeout.connect(lambda: rclpy.spin_once(self.ros_node, timeout_sec=0.01))
+        self.timer.start(30)
+
         self.kill_switch_state = 0
         self.autonomy_state = 0
         self.manual_drive_state = 0

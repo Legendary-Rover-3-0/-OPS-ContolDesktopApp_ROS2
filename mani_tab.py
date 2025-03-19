@@ -3,7 +3,7 @@ import pygame
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QGroupBox
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
-from std_msgs.msg import Float64MultiArray, String  # Dodano String dla danych RFID
+from std_msgs.msg import String  # Dodano String dla danych RFID
 from geometry_msgs.msg import Twist
 
 
@@ -97,9 +97,9 @@ class ManipulatorTab(QWidget):
 
 
     def init_ros_subscribers(self):
-        self.rfid_subscriber = self.node.create_subscription(String, "/song_of_seas", self.rfid_callback, 10)
+        self.node.create_subscription(String, "/RFID/string_data", self.rfid_callback, 10)
 
-    def rfid_callback(self, msg):
+    def rfid_callback(self, msg: String):
         self.rfid_data = msg.data
         self.rfid_label.setText(f"RFID: {self.rfid_data}")
 
@@ -163,9 +163,10 @@ class ManipulatorTab(QWidget):
                 new_values[i] = max(-100.0, min(100.0, new_values[i]))
 
             # Aktualizacja wartości i publikacja
-            self.current_values = new_values
-            self.update_ui()
-            self.publish_values()
+            if self.current_values != new_values:
+                self.current_values = new_values
+                self.update_ui()
+                self.publish_values()
 
 
 

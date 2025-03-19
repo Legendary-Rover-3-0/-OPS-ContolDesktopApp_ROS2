@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy, CompressedImage
-from std_msgs.msg import Int8MultiArray
+from std_msgs.msg import Int8MultiArray, String
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge
 import cv2
