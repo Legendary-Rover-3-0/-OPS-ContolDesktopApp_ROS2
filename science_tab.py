@@ -255,4 +255,4 @@ class ScienceTab(QWidget):
             button.click()
 
     def launch_plot_app(self):
-        subprocess.Popen(["python3", "wykresy.py"])  # Uruchom nową aplikację
+        subprocess.Popen(["python", "wykresy.py"])  # Uruchom nową aplikację

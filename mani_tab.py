@@ -1,6 +1,6 @@
 import threading
 import pygame
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QGroupBox
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QGroupBox, QGridLayout
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
 from std_msgs.msg import String  # Dodano String dla danych RFID
@@ -29,11 +29,11 @@ class ManipulatorTab(QWidget):
         self.init_ros_subscribers()
 
     def init_ui(self):
-        main_layout = QHBoxLayout()  # Główny układ poziomy
+        main_layout = QVBoxLayout()  # Główny układ pionowy
 
         # Kolumna dla manipulatora
         self.mani_group = QGroupBox("Manipulator Control")
-        mani_layout = QVBoxLayout()
+        mani_layout = QGridLayout()
 
         # Inicjalizacja suwaków dla każdego stopnia swobody
         self.sensitivities = [config.MANI_DEFAULT_VALUE] * 6  # Domyślnie 50 dla każdego stopnia
@@ -44,26 +44,36 @@ class ManipulatorTab(QWidget):
         for i in range(6):
             label = QLabel(f"Stopień {i+1}: 0.0")
             self.movement_labels.append(label)
-            mani_layout.addWidget(label)
+            mani_layout.addWidget(label, i, 0)
 
             slider = QSlider(Qt.Orientation.Horizontal)
             slider.setMinimum(1)
             slider.setMaximum(100)
-            slider.setValue(int(self.sensitivities[i]))  
+            slider.setValue(int(self.sensitivities[i]))
             slider.valueChanged.connect(lambda value, idx=i: self.update_sensitivity(idx, value))  # Przekazujemy indeks
 
+            # Ustawienie stałej szerokości suwaka
+            slider.setFixedWidth(200)  # Możesz dostosować szerokość do swoich potrzeb
+
             self.sensitivity_sliders.append(slider)
-            mani_layout.addWidget(QLabel(f"Czułość Stopnia {i+1}"))
-            mani_layout.addWidget(slider)
+            mani_layout.addWidget(QLabel(f"Czułość Stopnia {i+1}"), i, 1)
+            mani_layout.addWidget(slider, i, 2)
+
+            # Dodanie wartości liczbowej obok suwaka
+            value_label = QLabel(f"{self.sensitivities[i]}")
+            value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.sensitivity_sliders[i].valueChanged.connect(lambda value, lbl=value_label: lbl.setText(f"{value}"))
+            mani_layout.addWidget(value_label, i, 3)
 
         self.mani_group.setLayout(mani_layout)
         main_layout.addWidget(self.mani_group)
 
-        # Kolumna dla danych RFID
+        # Sekcja RFID na dole
         self.rfid_group = QGroupBox("RFID Data")
-        rfid_layout = QVBoxLayout()
+        rfid_layout = QHBoxLayout()
 
         self.rfid_label = QLabel(f"RFID: {self.rfid_data}")
+        self.rfid_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         rfid_layout.addWidget(self.rfid_label)
 
         self.rfid_group.setLayout(rfid_layout)
@@ -71,22 +81,38 @@ class ManipulatorTab(QWidget):
 
         self.setLayout(main_layout)
 
-
         # Stylizacja UI
         self.setStyleSheet("""
             QLabel {
-                font-size: 12px;
+                font-size: 14px;
                 color: #ddd;
             }
             QSlider {
                 background: #555;
+                min-width: 200px;  /* Stała szerokość suwaka */
+                margin: 0 10px;    /* Marginesy dla suwaka */
+            }
+            QSlider::groove:horizontal {
+                background: #666;
+                height: 8px;
+                border-radius: 4px;
+                margin: 0px;      /* Usunięcie marginesów w groove */
+            }
+            QSlider::handle:horizontal {
+                background: #ddd;
+                width: 18px;
+                margin: -5px 0;    /* Dostosowanie marginesów dla uchwytu */
+                border-radius: 9px;
             }
             QGroupBox {
-                font-size: 14px;
+                font-size: 16px;
                 font-weight: bold;
                 margin-top: 10px;
                 background-color: #444;
                 color: #ddd;
+                border: 2px solid #555;
+                border-radius: 5px;
+                padding: 10px;
             }
             QWidget {
                 background-color: #333;
@@ -95,7 +121,6 @@ class ManipulatorTab(QWidget):
 
     def init_ros_publishers(self):
         self.publisher = self.node.create_publisher(Twist, "/array_topic", 10)
-
 
     def init_ros_subscribers(self):
         self.node.create_subscription(String, "/RFID/string_data", self.rfid_callback, 10)
@@ -168,8 +193,6 @@ class ManipulatorTab(QWidget):
                 self.current_values = new_values
                 self.update_ui()
                 self.publish_values()
-
-
 
     def update_ui(self):
         for i, value in enumerate(self.current_values):

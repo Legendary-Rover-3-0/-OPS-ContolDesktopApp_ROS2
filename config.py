@@ -11,8 +11,8 @@ BUTTON_SELECTED_COLOR = "blue"
 # Konfiguracja agentów
 ANSIBLE_INVENTORY = "ansible_inventory.ini"
 AGENT_START_SCRIPT = "/home/legendary/kubatk/drive.sh" # skrypt musi pobierać 1 parametr (np: /dev/ttyUSB0)
-AUTONOMY_BASE_SCRIPT = "/home/legendary/kubatk/test.sh"
-AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/test.sh"
+AUTONOMY_BASE_SCRIPT = "/home/legendary/kubatk/test.sh tak"
+AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/test.sh 1"
 
 # Manipulator
 MANI_DEFAULT_VALUE = 80.0

@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox, QLineEdit
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QPalette
 from rclpy.node import Node
 from std_msgs.msg import Int32MultiArray
 import threading
@@ -12,10 +13,11 @@ class ServaTab(QWidget):
         self.gamepads = gamepads
         self.selected_gamepad = None
         self.running = False
-        self.is_gamepad_active = False  # Dodana flaga kontrolująca aktywność gamepada
+        self.is_gamepad_active = False  # Domyślnie wyłączony
         
-        self.servo_positions = [90, 90, 90, 90]  # Domyślne pozycje
+        self.servo_positions = [84, 90, 90, 90]  # Domyślne pozycje
         self.step_values = [10, 10, 10, 10]  # Domyślne kroki dla serw
+        self.first_servo = 84
         
         self.init_ui()
         self.init_ros_publisher()
@@ -55,6 +57,13 @@ class ServaTab(QWidget):
         
         self.servo_group.setLayout(servo_layout)
         main_layout.addWidget(self.servo_group)
+
+        # Dodajemy przycisk do włączania/wyłączania gamepada
+        self.gamepad_toggle_button = QPushButton("Gamepad OFF")
+        self.gamepad_toggle_button.setStyleSheet("background-color: red")
+        self.gamepad_toggle_button.clicked.connect(self.toggle_gamepad)
+        main_layout.addWidget(self.gamepad_toggle_button)
+
         self.setLayout(main_layout)
 
     def init_ros_publisher(self):
@@ -80,9 +89,16 @@ class ServaTab(QWidget):
             print("Invalid step value. Please enter a valid integer.")
     
     def adjust_servo_position(self, index, delta):
-        self.servo_positions[index] = max(0, min(180, self.servo_positions[index] + delta))
-        self.servo_labels[index].setText(f'Servo {index+1} Position: {self.servo_positions[index]}°')
-        self.publish_servo_positions()
+        if index == 0:
+            # Dla serwa 360, zmieniamy wartość tylko RAZ
+            self.servo_positions[index] = self.first_servo + delta  # Ustawiamy nową wartość
+            self.servo_labels[index].setText(f'Servo {index+1} Position: {self.servo_positions[index]}°')
+            self.publish_servo_positions()
+        else:
+            # Dla pozostałych serw, działamy normalnie
+            self.servo_positions[index] = max(0, min(180, self.servo_positions[index] + delta))
+            self.servo_labels[index].setText(f'Servo {index+1} Position: {self.servo_positions[index]}°')
+            self.publish_servo_positions()
     
     def publish_servo_positions(self):
         msg = Int32MultiArray()
@@ -94,25 +110,50 @@ class ServaTab(QWidget):
             if self.is_gamepad_active:  # Sprawdzamy, czy gamepad jest aktywny
                 pygame.event.pump()
             
-            axis_0 = self.selected_gamepad.get_axis(0)  # Oś X (lewy drążek)
-            axis_1 = self.selected_gamepad.get_axis(1)  # Oś Y (lewy drążek)
-            
-            if abs(axis_0) > 0.1:
-                self.adjust_servo_position(0, int(axis_0 * self.step_values[0]))
-            if abs(axis_1) > 0.1:
-                self.adjust_servo_position(1, int(axis_1 * self.step_values[1]))
+                axis_0 = self.selected_gamepad.get_axis(0)  # Oś X (lewy drążek)
+                axis_1 = self.selected_gamepad.get_axis(1)  # Oś Y (lewy drążek)
+                
+                if abs(axis_0) > 0.1:
+                    # Dla serwa 360, zmieniamy wartość tylko RAZ
+                    if self.servo_positions[0] == self.first_servo:  # Tylko jeśli wartość jest domyślna
+                        self.adjust_servo_position(0, int(axis_0 * self.step_values[0]))
+                else:
+                    # Po zwolnieniu drążka, wracamy do wartości domyślnej (90)
+                    if self.servo_positions[0] != self.first_servo:
+                        self.servo_positions[0] = self.first_servo
+                        self.servo_labels[0].setText(f'Servo 1 Position: {self.servo_positions[0]}°')
+                        self.publish_servo_positions()
+                
+                if abs(axis_1) > 0.1:
+                    self.adjust_servo_position(1, int(axis_1 * self.step_values[1]))
             
             pygame.time.wait(100)
     
+    def toggle_gamepad(self):
+        self.is_gamepad_active = not self.is_gamepad_active
+        if self.is_gamepad_active:
+            self.gamepad_toggle_button.setText("Gamepad ON")
+            self.gamepad_toggle_button.setStyleSheet("background-color: green")
+        else:
+            self.gamepad_toggle_button.setText("Gamepad OFF")
+            self.gamepad_toggle_button.setStyleSheet("background-color: red")
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_W:
-            self.adjust_servo_position(1, self.step_values[0])
+            self.adjust_servo_position(1, self.step_values[1])
         elif event.key() == Qt.Key.Key_S:
-            self.adjust_servo_position(1, -self.step_values[0])
+            self.adjust_servo_position(1, -self.step_values[1])
         elif event.key() == Qt.Key.Key_A:
-            self.adjust_servo_position(0, self.step_values[1])
+            self.adjust_servo_position(0, -self.step_values[0])  # Zmniejsz wartość dla serwa 0
         elif event.key() == Qt.Key.Key_D:
-            self.adjust_servo_position(0, -self.step_values[1])
+            self.adjust_servo_position(0, self.step_values[0])  # Zwiększ wartość dla serwa 0
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key.Key_A or event.key() == Qt.Key.Key_D:
+            # Po zwolnieniu przycisków A lub D, wracamy do wartości domyślnej (90)
+            self.servo_positions[0] = self.first_servo
+            self.servo_labels[0].setText(f'Servo 1 Position: {self.servo_positions[0]}°')
+            self.publish_servo_positions()
 
     def closeEvent(self, event):
         self.running = False
