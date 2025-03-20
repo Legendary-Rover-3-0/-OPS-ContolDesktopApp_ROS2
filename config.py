@@ -11,7 +11,8 @@ BUTTON_SELECTED_COLOR = "blue"
 # Konfiguracja agentów
 ANSIBLE_INVENTORY = "ansible_inventory.ini"
 AGENT_START_SCRIPT = "/home/legendary/kubatk/drive.sh" # skrypt musi pobierać 1 parametr (np: /dev/ttyUSB0)
-VISION_SCRIPT = "/home/legendary/kubatk/vision.sh"
+AUTONOMY_BASE_SCRIPT = "/home/legendary/kubatk/test.sh"
+AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/test.sh"
 
 # Manipulator
 MANI_DEFAULT_VALUE = 80.0
@@ -36,3 +37,4 @@ SERVO_FULL_OPEN_ANGLE = 180.0   #100% - domyslnie 180.0 stopni
 
 AUTO_CLOSE_SERVOS_ON_APP_START = True # wysylanie zamkniecia serv science przy wlaczeniu apki
 AUTO_CLOSE_SERVOS_ON_APP_CLOSE = True # wysylanie zamkniecia serv science przy zamknieciu apki
+

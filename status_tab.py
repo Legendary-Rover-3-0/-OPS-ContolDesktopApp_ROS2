@@ -58,6 +58,11 @@ class StatusTab(QWidget):
         self.start_agent_screen_button = QPushButton("🚀 Uruchom Agent MicroROS")
         self.start_agent_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
         ports_layout.addWidget(self.start_agent_screen_button)
+        ports_layout.addStretch(20)
+
+        self.start_autonomy_button = QPushButton("🤖 Uruchom autonomie (baza)")
+        self.start_autonomy_button.clicked.connect(self.start_autonomy)
+        ports_layout.addWidget(self.start_autonomy_button)
         ports_layout.addStretch(100)
         
             # Screeny
@@ -248,6 +253,24 @@ class StatusTab(QWidget):
         if selected:
             screen_name = selected.text().split('.')[0]
             self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S {screen_name} -X quit'", callback=self.view_screens)
+
+    def start_autonomy(self):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS AutonomyBase {config.AUTONOMY_BASE_SCRIPT}'",
+            callback=self.view_screens
+        )
+
+    def start_autonomy_drive(self):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS AutonomyDrive {config.AUTONOMY_DRIVE_SCRIPT}'",
+            callback=self.view_screens
+        )
+
+    def stop_autonomy_drive(self):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S AutonomyDrive -X quit'",
+            callback=self.view_screens
+        )
 
     def fetch_logs(self):
         selected = self.screen_list.currentItem()

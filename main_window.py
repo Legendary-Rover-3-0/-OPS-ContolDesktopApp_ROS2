@@ -74,6 +74,10 @@ class MainWindow(QMainWindow):
         self.camera_windows = [None] * 4
 
     def toggle_kill_switch(self):
+        # Wylaczenie skryptu jazdy autonomicznej
+        if self.autonomy_state:
+            self.status_tab.stop_autonomy_drive()
+
         self.kill_switch_state = 1 - self.kill_switch_state
         self.autonomy_state = 0
         self.manual_drive_state = 0
@@ -99,7 +103,17 @@ class MainWindow(QMainWindow):
         self.mani_tab.is_gamepad_active = self.manual_drive_state == 1
         self.serva_tab.is_gamepad_active = self.manual_drive_state == 1
 
+        # Uruchomienie skryptu jazdy autonomicznej
+        if self.autonomy_state:
+            self.status_tab.start_autonomy_drive()
+        else:
+            self.status_tab.stop_autonomy_drive()
+
     def toggle_manual_callback(self):
+        # Wylaczenie skryptu jazdy autonomicznej
+        if self.autonomy_state:
+            self.status_tab.stop_autonomy_drive()
+
         self.manual_drive_state = 1 - self.manual_drive_state
         self.kill_switch_state = 0
         self.autonomy_state = 0
