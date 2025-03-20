@@ -48,10 +48,10 @@ class CamerasTab(QWidget):
         self.setLayout(main_layout)
 
     def open_camera_stream(self, port):
-        ip = self.ip_input.text() or "192.168.2.98"
+        ip = self.ip_input.text() or "192.168.2.10"
         
         # Komenda GStreamer z dynamicznym IP i portem
-        gst_command = f"gst-launch-1.0 -v udpsrc address={ip} port={port} ! application/x-rtp,encoding-name=H264 ! rtph264depay ! h264parse ! avdec_h264 ! queue ! autovideosink"
+        gst_command = f"gst-launch-1.0 -v udpsrc address={ip} port={port} ! application/x-rtp,encoding-name=H264 ! rtph264depay ! avdec_h264 ! queue ! autovideosink"
 
         # Otwieranie w nowym terminalu
         terminal_command = [
