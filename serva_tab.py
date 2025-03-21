@@ -106,14 +106,17 @@ class ServaTab(QWidget):
         self.servo_publisher.publish(msg)
     
     def read_gamepad(self):
+        dead_zone = 0.8 # Definiujemy dead zone (20% zakresu ruchu drążka)
+        
         while self.running and self.selected_gamepad:
             if self.is_gamepad_active:  # Sprawdzamy, czy gamepad jest aktywny
                 pygame.event.pump()
             
                 axis_0 = self.selected_gamepad.get_axis(0)  # Oś X (lewy drążek)
-                axis_1 = self.selected_gamepad.get_axis(1)  # Oś Y (lewy drążek)
+                axis_1 = self.selected_gamepad.get_axis(4)  # Oś Y (prawy drążek)
                 
-                if abs(axis_0) > 0.1:
+                # Sprawdzamy, czy wartość osi X jest poza dead zone
+                if abs(axis_0) > dead_zone:
                     # Dla serwa 360, zmieniamy wartość tylko RAZ
                     if self.servo_positions[0] == self.first_servo:  # Tylko jeśli wartość jest domyślna
                         self.adjust_servo_position(0, int(axis_0 * self.step_values[0]))
@@ -124,7 +127,8 @@ class ServaTab(QWidget):
                         self.servo_labels[0].setText(f'Servo 1 Position: {self.servo_positions[0]}°')
                         self.publish_servo_positions()
                 
-                if abs(axis_1) > 0.1:
+                # Sprawdzamy, czy wartość osi Y jest poza dead zone
+                if abs(axis_1) > dead_zone:
                     self.adjust_servo_position(1, int(axis_1 * self.step_values[1]))
             
             pygame.time.wait(100)
