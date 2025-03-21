@@ -1,4 +1,5 @@
 import sys
+import time
 import pygame
 import threading
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
@@ -19,10 +20,12 @@ import config
 class MainWindow(QMainWindow):
     def closeEvent(self, event):
         print("Zamykanie aplikacji...")
-        if self.manual_drive_state == 1:
+        if self.manual_drive_state == 1 or self.mani_tab.is_gamepad_active == 1:
             self.manual_drive_state = 0  # Wymuszenie zatrzymania ręcznego trybu jazdy
+            self.mani_tab.is_gamepad_active = 0
+            self.serva_tab.is_gamepad_active = 0
             print("Zatrzymywanie lazika, zeby nie zabil kogos lub siebie...")
-            pygame.time.wait(50)
+            time.sleep(1)
 
         if config.AUTO_CLOSE_SERVOS_ON_APP_CLOSE:
             self.science_tab.close_all_servos()
@@ -142,7 +145,7 @@ class MainWindow(QMainWindow):
             
             if self.reading_thread is None or not self.reading_thread.is_alive():
                 self.running = True
-                self.reading_thread = threading.Thread(target=self.read_gamepad, daemon=True)
+                self.reading_thread = threading.Thread(target=self.read_gamepad)#, daemon=True)
                 self.reading_thread.start()
 
     def read_gamepad(self):
@@ -151,9 +154,9 @@ class MainWindow(QMainWindow):
                 for _ in range(5):
                     self.ros_node.publish_empty_gamepad_input()
                     self.mani_tab.publish_empty_values()
-                    pygame.time.wait(50)
+                    time.sleep(0.05)
                 self.running = False
-                return
+                break
             else:
                 pygame.event.pump()
                 buttons = [self.selected_gamepad.get_button(i) for i in range(self.selected_gamepad.get_numbuttons())]
@@ -161,5 +164,5 @@ class MainWindow(QMainWindow):
                 hat = self.selected_gamepad.get_hat(0)  # Pobranie wartości D-pad (hat)
 
                 self.ros_node.publish_gamepad_input(buttons, axes, hat)  # Teraz hat jest dodawany do axes
-            
             pygame.time.wait(50)
+

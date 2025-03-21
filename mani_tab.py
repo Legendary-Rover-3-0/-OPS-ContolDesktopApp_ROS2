@@ -1,4 +1,5 @@
 import threading
+import time
 import pygame
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QGroupBox, QGridLayout
 from PyQt6.QtCore import Qt
@@ -16,6 +17,7 @@ class ManipulatorTab(QWidget):
         self.selected_gamepad = None
         self.running = False
         self.is_gamepad_active = False  # Dodana flaga kontrolująca aktywność gamepada
+        self.gamepad_thread = None
 
         # Inicjalizacja wartości dla 6 stopni swobody
         self.current_values = [0.0] * 6  # Zmiana na wartości zmiennoprzecinkowe
@@ -131,17 +133,23 @@ class ManipulatorTab(QWidget):
 
     def set_selected_gamepad(self, gamepad):
         self.selected_gamepad = gamepad
-        if self.selected_gamepad:
+        if self.selected_gamepad and (self.gamepad_thread is None or not self.gamepad_thread.is_alive()):
             self.running = True
-            self.gamepad_thread = threading.Thread(target=self.read_gamepad, daemon=True)
+            self.gamepad_thread = threading.Thread(target=self.read_gamepad)#, daemon=True)
             self.gamepad_thread.start()
-        else:
-            self.running = False
+        # else:
+        #     self.running = False
 
     def read_gamepad(self):
         while self.running and self.selected_gamepad:
-            if self.is_gamepad_active:  # Sprawdzamy, czy gamepad jest aktywny
-                pygame.event.pump()
+            if not self.is_gamepad_active:  # Sprawdzamy, czy gamepad jest aktywny
+                for _ in range(5):
+                    self.publish_empty_values()
+                    time.sleep(0.05)
+                self.running = False
+                break
+
+            pygame.event.pump()
 
             # Mapa przycisków do stopni swobody
             button_mapping = {
@@ -163,7 +171,7 @@ class ManipulatorTab(QWidget):
                 (0, 1): (1, 1),
             }
 
-             # Odczyt przycisków
+            # Odczyt przycisków
             new_values = [0.0] * 6
             for button, (index, direction) in button_mapping.items():
                 if self.selected_gamepad.get_button(button):
