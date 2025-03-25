@@ -43,8 +43,17 @@ class ManipulatorTab(QWidget):
 
         # Etykiety i suwaki dla każdego stopnia swobody
         self.movement_labels = []
+        degree_names = [
+            "Podstawa", 
+            "Ramie (dół)", 
+            "Ramię (góra)", 
+            "Nadgarstek", 
+            "Chwytak obrót",
+            "Chwytak zacisk"
+        ]
         for i in range(6):
-            label = QLabel(f"Stopień {i+1}: 0.0")
+            name = degree_names[i] if i < len(degree_names) else f"Stopień {i+1}"
+            label = QLabel(f"{name}: {i+1}: 0.0")
             self.movement_labels.append(label)
             mani_layout.addWidget(label, i, 0)
 
@@ -203,8 +212,20 @@ class ManipulatorTab(QWidget):
                 self.publish_values()
 
     def update_ui(self):
+        # Lista własnych nazw dla każdego stopnia
+        degree_names = [
+            "Podstawa", 
+            "Ramie (dół)", 
+            "Ramię (góra)", 
+            "Nadgarstek", 
+            "Chwytak obrót",
+            "Chwytak zacisk"
+        ]
+        
         for i, value in enumerate(self.current_values):
-            self.movement_labels[i].setText(f"Stopień {i+1}: {value:.2f}")  # Formatowanie do dwóch miejsc po przecinku
+            # Upewnij się, że lista nazw jest wystarczająco długa
+            name = degree_names[i] if i < len(degree_names) else f"Stopień {i+1}"
+            self.movement_labels[i].setText(f"{name}: {value:.2f}")# Formatowanie do dwóch miejsc po przecinku
 
     def publish_values(self):
         msg = Twist()
