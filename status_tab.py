@@ -238,7 +238,8 @@ class StatusTab(QWidget):
         return self.group_selector.currentText()
 
     def get_ports(self):
-        self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyS\* -o -name ttyUSB\* -o -name ttyA\* \)'")
+        #self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyS\* -o -name ttyUSB\* -o -name ttyA\* \)'")
+        self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyUSB\* -o -name ttyAC\* \)'")
 
     def start_screen(self, name_scrypt):
         selected = self.port_list.currentItem()

@@ -1,0 +1,96 @@
+docker run --rm -it \
+  --platform linux/amd64 \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v $HOME/.Xauthority:/root/.Xauthority \
+  ubuntu:latest \
+  bash -c "apt-get update && apt-get install -y x11-apps && xclock"
+
+==================================
+
+xhost +local:docker
+
+====================================
+
+FROM ubuntu:20.04  
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalacja zależności do aplikacji ZWO ASIStudio
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libx11-6 \
+    libxcb1 \
+    libxext6 \
+    libxrender1 \
+    libqt5widgets5 \
+    x11-apps \
+    && apt-get clean
+
+# Kopiowanie pliku instalacyjnego ASIStudio
+COPY ASIStudio_V1.15.run /opt/ASIStudio_V1.15.run
+
+# Nadanie uprawnień do instalatora i instalacja
+RUN chmod +x /opt/ASIStudio_V1.15.run && \
+    /opt/ASIStudio_V1.15.run --mode unattended
+
+# Uruchomienie aplikacji ASIStudio
+CMD ["/opt/ASIStudio/ASIStudio"]
+
+
+======================================
+
+docker build -t asi-studio .
+
+
+==========================================
+docker run --rm -it \
+  --device /dev/bus/usb:/dev/bus/usb \  # Udostępnienie kamerki ZWO
+  -e DISPLAY=$DISPLAY \  # Przekazanie zmiennej środowiskowej X11
+  -v /tmp/.X11-unix:/tmp/.X11-unix \  # Udostępnienie gniazda X11
+  -v $HOME/.Xauthority:/root/.Xauthority \  # Udostępnienie autoryzacji X11
+  asi-studio 	
+  
+  
+======================================
+
+legendary@ubuntu:~/docker$ docker build -t asi-studio .
+[+] Building 10.1s (2/2) FINISHED                                docker:default
+ => [internal] load build definition from dockerfile                       0.0s
+ => => transferring dockerfile: 634B                                       0.0s
+ => ERROR [internal] load metadata for docker.io/library/ubuntu:20.04     10.0s
+------
+ > [internal] load metadata for docker.io/library/ubuntu:20.04:
+------
+dockerfile:1
+--------------------
+   1 | >>> FROM ubuntu:20.04  
+   2 |     
+   3 |     ENV DEBIAN_FRONTEND=noninteractive
+--------------------
+ERROR: failed to solve: ubuntu:20.04: failed to resolve source metadata for docker.io/library/ubuntu:20.04: failed to do request: Head "https://registry-1.docker.io/v2/library/ubuntu/manifests/20.04": dial tcp: lookup registry-1.docker.io on 127.0.0.53:53: read udp 127.0.0.1:56280->127.0.0.53:53: i/o timeout
+legendary@ubuntu:~/docker$ 
+
+===========================================
+
+
+ACM1 - jazda
+ACM0 - mani
+USB0 - gier i zabaw
+USB1 - Science
+
+
+cam4 - maszt
+cam1 - tył 
+
+cam 2 i 3 manipulator 
+
+
+sudo reboot
+
+vncserver -list
+vncserver -kill :1
+
+vncserver :1 -localhost no -geometry 1920x1080
+
+

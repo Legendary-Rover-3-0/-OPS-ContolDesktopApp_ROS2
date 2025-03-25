@@ -16,7 +16,7 @@ class ServaTab(QWidget):
         self.is_gamepad_active = False  # Domyślnie wyłączony
         
         self.servo_positions = [84, 90, 90, 90]  # Domyślne pozycje
-        self.step_values = [10, 10, 10, 10]  # Domyślne kroki dla serw
+        self.step_values = [10, 5, 10, 10]  # Domyślne kroki dla serw
         self.first_servo = 84
         
         self.init_ui()
@@ -112,7 +112,7 @@ class ServaTab(QWidget):
             if self.is_gamepad_active:  # Sprawdzamy, czy gamepad jest aktywny
                 pygame.event.pump()
             
-                axis_0 = self.selected_gamepad.get_axis(0)  # Oś X (lewy drążek)
+                axis_0 = self.selected_gamepad.get_axis(3)  # Oś X (lewy drążek)
                 axis_1 = self.selected_gamepad.get_axis(4)  # Oś Y (prawy drążek)
                 
                 # Sprawdzamy, czy wartość osi X jest poza dead zone
