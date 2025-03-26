@@ -1,6 +1,7 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox, QLineEdit
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
+                            QGroupBox, QLineEdit, QFrame, QSpacerItem, QSizePolicy)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPalette
+from PyQt6.QtGui import QFont, QPalette
 from rclpy.node import Node
 from std_msgs.msg import Int32MultiArray
 import threading
@@ -13,10 +14,10 @@ class ServaTab(QWidget):
         self.gamepads = gamepads
         self.selected_gamepad = None
         self.running = False
-        self.is_gamepad_active = False  # Domyślnie wyłączony
+        self.is_gamepad_active = False
         
-        self.servo_positions = [84, 90, 90, 90]  # Domyślne pozycje
-        self.step_values = [10, 5, 10, 10]  # Domyślne kroki dla serw
+        self.servo_positions = [84, 90, 90, 90]
+        self.step_values = [10, 5, 10, 10]
         self.first_servo = 84
         
         self.init_ui()
@@ -25,32 +26,159 @@ class ServaTab(QWidget):
 
     def init_ui(self):
         main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(20)
+
+        # Dark theme styling
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #2D2D2D;
+                color: #E0E0E0;
+            }
+            QGroupBox {
+                font-size: 14px;
+                font-weight: bold;
+                border: 2px solid #444;
+                border-radius: 8px;
+                margin-top: 12px;
+                padding-top: 18px;
+                background-color: #333;
+            }
+            QLabel {
+                font-size: 13px;
+                color: #EEE;
+            }
+            QPushButton {
+                font-size: 13px;
+                min-height: 35px;
+                padding: 6px;
+                border-radius: 5px;
+                background-color: #444;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #555;
+            }
+            QLineEdit {
+                font-size: 13px;
+                padding: 6px;
+                border-radius: 4px;
+                border: 1px solid #555;
+                background-color: #3A3A3A;
+                color: white;
+                selection-background-color: #555;
+            }
+            QFrame {
+                border-radius: 6px;
+                background-color: #3A3A3A;
+                border: 1px solid #444;
+            }
+        """)
+
+        # Servo control group
+        self.servo_group = QGroupBox("SERVO CONTROL")
+        servo_layout = QHBoxLayout()
+        servo_layout.setSpacing(25)
         
-        self.servo_group = QGroupBox("Servo Control")
-        servo_layout = QHBoxLayout()  # Zmieniamy na QHBoxLayout
+        servo_names = [
+            "360° Camera", 
+            "180° Camera", 
+            "Science Camera", 
+            "Forever Alone Module"
+        ]
         
-        self.servo_labels = [QLabel(f'Servo {i+1} Position: {self.servo_positions[i]}°') for i in range(4)]
-        self.step_inputs = [QLineEdit(str(self.step_values[i])) for i in range(4)]
-        self.update_buttons = [QPushButton(f'Aktualizuj wartość dla serwa {i+1}') for i in range(4)]
-        self.increase_buttons = [QPushButton('→') for i in range(4)]
-        self.decrease_buttons = [QPushButton('←') for i in range(4)]
+        self.servo_labels = []
+        self.step_inputs = []
+        self.update_buttons = []
+        self.increase_buttons = []
+        self.decrease_buttons = []
         
         for i in range(4):
-            column_layout = QVBoxLayout()  # Kolumna dla każdego serwa
-            column_layout.addWidget(self.servo_labels[i])
+            # Frame for each servo
+            frame = QFrame()
+            frame.setFrameShape(QFrame.Shape.StyledPanel)
+            frame.setStyleSheet("padding: 12px;")
             
+            column_layout = QVBoxLayout(frame)
+            column_layout.setSpacing(10)
+            
+            # Servo name label
+            name_label = QLabel(f"<b>{servo_names[i]}</b>")
+            name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            name_label.setStyleSheet("font-size: 14px; color: #DDD;")
+            column_layout.addWidget(name_label)
+            
+            # Current position
+            pos_label = QLabel(f"Position: {self.servo_positions[i]}°")
+            pos_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            pos_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #3498DB;")
+            self.servo_labels.append(pos_label)
+            column_layout.addWidget(pos_label)
+            
+            # Step control
             step_layout = QHBoxLayout()
+            step_layout.addWidget(QLabel("Step:"))
+            self.step_inputs.append(QLineEdit(str(self.step_values[i])))
+            self.step_inputs[i].setMaximumWidth(60)
+            self.step_inputs[i].setAlignment(Qt.AlignmentFlag.AlignCenter)
             step_layout.addWidget(self.step_inputs[i])
-            step_layout.addWidget(self.update_buttons[i])
             column_layout.addLayout(step_layout)
             
-            button_layout = QHBoxLayout()
-            button_layout.addWidget(self.decrease_buttons[i])
-            button_layout.addWidget(self.increase_buttons[i])
-            column_layout.addLayout(button_layout)
+            # Update step button
+            update_btn = QPushButton("Set Step")
+            update_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #505050;
+                    border: 1px solid #666;
+                }
+                QPushButton:hover {
+                    background-color: #606060;
+                }
+            """)
+            self.update_buttons.append(update_btn)
+            column_layout.addWidget(update_btn)
             
-            servo_layout.addLayout(column_layout)
+            # Control buttons
+            control_layout = QHBoxLayout()
+            control_layout.setSpacing(10)
             
+            decrease_btn = QPushButton("◄")
+            decrease_btn.setStyleSheet("""
+                QPushButton {
+                    font-size: 18px; 
+                    min-width: 50px;
+                    background-color: #505050;
+                    color: white;
+                }
+                QPushButton:hover {
+                    background-color: #606060;
+                }
+            """)
+            
+            increase_btn = QPushButton("►")
+            increase_btn.setStyleSheet("""
+                QPushButton {
+                    font-size: 18px; 
+                    min-width: 50px;
+                    background-color: #505050;
+                    color: white;
+                }
+                QPushButton:hover {
+                    background-color: #606060;
+                }
+            """)
+            
+            self.decrease_buttons.append(decrease_btn)
+            self.increase_buttons.append(increase_btn)
+            
+            control_layout.addWidget(decrease_btn)
+            control_layout.addWidget(increase_btn)
+            column_layout.addLayout(control_layout)
+            
+            # Add frame to layout
+            servo_layout.addWidget(frame)
+            
+            # Connect signals
             self.update_buttons[i].clicked.connect(lambda _, i=i: self.update_step_value(i))
             self.increase_buttons[i].clicked.connect(lambda _, i=i: self.adjust_servo_position(i, self.step_values[i]))
             self.decrease_buttons[i].clicked.connect(lambda _, i=i: self.adjust_servo_position(i, -self.step_values[i]))
@@ -58,12 +186,48 @@ class ServaTab(QWidget):
         self.servo_group.setLayout(servo_layout)
         main_layout.addWidget(self.servo_group)
 
-        # Dodajemy przycisk do włączania/wyłączania gamepada
-        self.gamepad_toggle_button = QPushButton("Gamepad OFF")
-        self.gamepad_toggle_button.setStyleSheet("background-color: red")
+        # Gamepad control group
+        gamepad_group = QGroupBox("EXTERNAL CONTROL")
+        gamepad_layout = QVBoxLayout()
+        gamepad_layout.setSpacing(15)
+        
+        self.gamepad_toggle_button = QPushButton("GAMEPAD: DISABLED")
+        self.gamepad_toggle_button.setStyleSheet("""
+            QPushButton {
+                font-size: 16px;
+                font-weight: bold;
+                min-height: 50px;
+                background-color: #505050;
+                color: white;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #606060;
+            }
+        """)
         self.gamepad_toggle_button.clicked.connect(self.toggle_gamepad)
-        main_layout.addWidget(self.gamepad_toggle_button)
-
+        
+        # Keyboard instruction label
+        instruction_label = QLabel("""
+            <div style='font-size: 13px; color: #AAA;'>
+            <b>KEYBOARD CONTROL:</b><br>
+            <table width='100%'>
+            <tr><td>360° Camera:</td><td>A (left) / D (right)</td></tr>
+            <tr><td>180° Camera:</td><td>W (up) / S (down)</td></tr>
+            <tr><td>Science Camera:</td><td>K (up) / L (down)</td></tr>
+            <tr><td>Forever Alone Module:</td><td>U (up) / J (down)</td></tr>
+            </table>
+            </div>
+        """)
+        instruction_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        gamepad_layout.addWidget(self.gamepad_toggle_button)
+        gamepad_layout.addWidget(instruction_label)
+        gamepad_group.setLayout(gamepad_layout)
+        
+        main_layout.addWidget(gamepad_group)
+        main_layout.addItem(QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+        
         self.setLayout(main_layout)
 
     def init_ros_publisher(self):
@@ -84,20 +248,22 @@ class ServaTab(QWidget):
     
     def update_step_value(self, index):
         try:
-            self.step_values[index] = int(self.step_inputs[index].text())
+            new_value = int(self.step_inputs[index].text())
+            if 1 <= new_value <= 30:
+                self.step_values[index] = new_value
+            else:
+                print("Step value should be between 1 and 30")
         except ValueError:
             print("Invalid step value. Please enter a valid integer.")
     
     def adjust_servo_position(self, index, delta):
         if index == 0:
-            # Dla serwa 360, zmieniamy wartość tylko RAZ
-            self.servo_positions[index] = self.first_servo + delta  # Ustawiamy nową wartość
-            self.servo_labels[index].setText(f'Servo {index+1} Position: {self.servo_positions[index]}°')
+            self.servo_positions[index] = self.first_servo + delta
+            self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
             self.publish_servo_positions()
         else:
-            # Dla pozostałych serw, działamy normalnie
             self.servo_positions[index] = max(0, min(180, self.servo_positions[index] + delta))
-            self.servo_labels[index].setText(f'Servo {index+1} Position: {self.servo_positions[index]}°')
+            self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
             self.publish_servo_positions()
     
     def publish_servo_positions(self):
@@ -106,28 +272,24 @@ class ServaTab(QWidget):
         self.servo_publisher.publish(msg)
     
     def read_gamepad(self):
-        dead_zone = 0.8 # Definiujemy dead zone (20% zakresu ruchu drążka)
+        dead_zone = 0.8
         
         while self.running and self.selected_gamepad:
-            if self.is_gamepad_active:  # Sprawdzamy, czy gamepad jest aktywny
+            if self.is_gamepad_active:
                 pygame.event.pump()
             
-                axis_0 = self.selected_gamepad.get_axis(3)  # Oś X (lewy drążek)
-                axis_1 = self.selected_gamepad.get_axis(4)  # Oś Y (prawy drążek)
+                axis_0 = self.selected_gamepad.get_axis(3)  # Left stick X
+                axis_1 = self.selected_gamepad.get_axis(4)  # Right stick Y
                 
-                # Sprawdzamy, czy wartość osi X jest poza dead zone
                 if abs(axis_0) > dead_zone:
-                    # Dla serwa 360, zmieniamy wartość tylko RAZ
-                    if self.servo_positions[0] == self.first_servo:  # Tylko jeśli wartość jest domyślna
+                    if self.servo_positions[0] == self.first_servo:
                         self.adjust_servo_position(0, int(axis_0 * self.step_values[0]))
                 else:
-                    # Po zwolnieniu drążka, wracamy do wartości domyślnej (90)
                     if self.servo_positions[0] != self.first_servo:
                         self.servo_positions[0] = self.first_servo
-                        self.servo_labels[0].setText(f'Servo 1 Position: {self.servo_positions[0]}°')
+                        self.servo_labels[0].setText(f"Position: {self.servo_positions[0]}°")
                         self.publish_servo_positions()
                 
-                # Sprawdzamy, czy wartość osi Y jest poza dead zone
                 if abs(axis_1) > dead_zone:
                     self.adjust_servo_position(1, int(axis_1 * self.step_values[1]))
             
@@ -136,27 +298,58 @@ class ServaTab(QWidget):
     def toggle_gamepad(self):
         self.is_gamepad_active = not self.is_gamepad_active
         if self.is_gamepad_active:
-            self.gamepad_toggle_button.setText("Gamepad ON")
-            self.gamepad_toggle_button.setStyleSheet("background-color: green")
+            self.gamepad_toggle_button.setText("GAMEPAD: ENABLED")
+            self.gamepad_toggle_button.setStyleSheet("""
+                QPushButton {
+                    font-size: 16px;
+                    font-weight: bold;
+                    min-height: 50px;
+                    background-color: #27AE60;
+                    color: white;
+                    border-radius: 8px;
+                }
+                QPushButton:hover {
+                    background-color: #2ECC71;
+                }
+            """)
         else:
-            self.gamepad_toggle_button.setText("Gamepad OFF")
-            self.gamepad_toggle_button.setStyleSheet("background-color: red")
+            self.gamepad_toggle_button.setText("GAMEPAD: DISABLED")
+            self.gamepad_toggle_button.setStyleSheet("""
+                QPushButton {
+                    font-size: 16px;
+                    font-weight: bold;
+                    min-height: 50px;
+                    background-color: #505050;
+                    color: white;
+                    border-radius: 8px;
+                }
+                QPushButton:hover {
+                    background-color: #606060;
+                }
+            """)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_W:
-            self.adjust_servo_position(1, self.step_values[1])
+            self.adjust_servo_position(1, self.step_values[1])  # 180° Camera - up
         elif event.key() == Qt.Key.Key_S:
-            self.adjust_servo_position(1, -self.step_values[1])
+            self.adjust_servo_position(1, -self.step_values[1])  # 180° Camera - down
         elif event.key() == Qt.Key.Key_A:
-            self.adjust_servo_position(0, -self.step_values[0])  # Zmniejsz wartość dla serwa 0
+            self.adjust_servo_position(0, -self.step_values[0])  # 360° Camera - left
         elif event.key() == Qt.Key.Key_D:
-            self.adjust_servo_position(0, self.step_values[0])  # Zwiększ wartość dla serwa 0
+            self.adjust_servo_position(0, self.step_values[0])  # 360° Camera - right
+        elif event.key() == Qt.Key.Key_K:
+            self.adjust_servo_position(2, self.step_values[2])  # Science Camera - up
+        elif event.key() == Qt.Key.Key_L:
+            self.adjust_servo_position(2, -self.step_values[2])  # Science Camera - down
+        elif event.key() == Qt.Key.Key_U:
+            self.adjust_servo_position(3, self.step_values[3])  # Forever Alone Module - up
+        elif event.key() == Qt.Key.Key_J:
+            self.adjust_servo_position(3, -self.step_values[3])  # Forever Alone Module - down
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_A or event.key() == Qt.Key.Key_D:
-            # Po zwolnieniu przycisków A lub D, wracamy do wartości domyślnej (90)
             self.servo_positions[0] = self.first_servo
-            self.servo_labels[0].setText(f'Servo 1 Position: {self.servo_positions[0]}°')
+            self.servo_labels[0].setText(f"Position: {self.servo_positions[0]}°")
             self.publish_servo_positions()
 
     def closeEvent(self, event):
