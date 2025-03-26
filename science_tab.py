@@ -27,6 +27,9 @@ class ScienceTab(QWidget):
         self.update_interval = 5
         self.update_counter = 0
 
+        # Initialize mass offsets for taring
+        self.mass_offsets = [0.0] * 4
+
         # Create data directory
         self.data_directory = "sensor_data"
         if not os.path.exists(self.data_directory):
@@ -76,17 +79,53 @@ class ScienceTab(QWidget):
         mass_layout = QGridLayout()
         mass_layout.setSpacing(10)
         self.mass_labels = []
+        self.tare_buttons = []
+        self.untare_buttons = []
         for i in range(4):
             frame = QFrame()
             frame.setFrameShape(QFrame.Shape.StyledPanel)
             frame.setLineWidth(1)
-            frame_layout = QVBoxLayout(frame)
+            frame_layout = QHBoxLayout(frame)
+            
+            # Create container for label to center it vertically
+            label_container = QWidget()
+            label_layout = QVBoxLayout(label_container)
+            label_layout.setContentsMargins(0, 0, 0, 0)
             
             label = QLabel(f"Sensor {i+1}:\n--- g")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setFont(QFont('Arial', 11))
+            label_layout.addWidget(label, alignment=Qt.AlignmentFlag.AlignVCenter)
             self.mass_labels.append(label)
-            frame_layout.addWidget(label)
+            
+            # Add buttons container
+            buttons_container = QWidget()
+            buttons_layout = QHBoxLayout(buttons_container)
+            buttons_layout.setContentsMargins(0, 0, 0, 0)
+            buttons_layout.setSpacing(3)
+            
+            # Add tare button
+            tare_btn = QPushButton("T")
+            tare_btn.setFont(QFont('Arial', 9))
+            tare_btn.setFixedSize(30, 30)
+            tare_btn.setToolTip("Taruj wagę")
+            tare_btn.clicked.connect(lambda _, i=i: self.tare_scale(i))
+            self.tare_buttons.append(tare_btn)
+            
+            # Add untare button
+            untare_btn = QPushButton("C")
+            untare_btn.setFont(QFont('Arial', 9))
+            untare_btn.setFixedSize(30, 30)
+            untare_btn.setToolTip("Cofnij tarowanie")
+            untare_btn.clicked.connect(lambda _, i=i: self.untare_scale(i))
+            self.untare_buttons.append(untare_btn)
+            
+            buttons_layout.addWidget(tare_btn)
+            buttons_layout.addWidget(untare_btn)
+            
+            frame_layout.addWidget(label_container, stretch=1)
+            frame_layout.addWidget(buttons_container)
+            frame_layout.setSpacing(5)
             
             mass_layout.addWidget(frame, i//2, i%2)
         self.mass_group.setLayout(mass_layout)
@@ -224,8 +263,8 @@ class ScienceTab(QWidget):
                 self.update_servo_state(index, config.SERVO_CLOSED_ANGLE)
 
         # Add columns to main layout
-        main_layout.addLayout(left_column, 1)  # Rozciągnięta lewa kolumna
-        main_layout.addWidget(right_column)    # Stała szerokość prawej kolumny
+        main_layout.addLayout(left_column, 1)
+        main_layout.addWidget(right_column)
 
         self.setLayout(main_layout)
         
@@ -272,6 +311,34 @@ class ScienceTab(QWidget):
                 border-radius: 5px;
                 background-color: #3a3a3a;
             }
+            QPushButton[text="T"] {
+                background-color: #5D6D7E;
+                font-size: 9px;
+                padding: 2px;
+                min-width: 20px;
+                max-width: 30px;
+                max-height: 30px;
+            }
+            QPushButton[text="T"]:hover {
+                background-color: #6D7E8E;
+            }
+            QPushButton[text="C"] {
+                background-color: #7D8E9E;
+                font-size: 9px;
+                padding: 2px;
+                min-width: 20px;
+                max-width: 30px;
+                max-height: 30px;
+            }
+            QPushButton[text="C"]:hover {
+                background-color: #8D9EAE;
+            }
+            QToolTip {
+                background-color: #454545;
+                color: white;
+                border: 1px solid #666;
+                padding: 2px;
+            }
         """)
 
         # Additional dynamic styles
@@ -286,7 +353,6 @@ class ScienceTab(QWidget):
             }
         """)
 
-    # ... (reszta metod pozostaje bez zmian)
     def init_ros_subscriptions(self):
         self.node.create_subscription(Float32MultiArray, '/temperature_data', self.temperature_callback, 10)
         self.node.create_subscription(Float32MultiArray, '/mass_data', self.mass_callback, 10)
@@ -328,10 +394,11 @@ class ScienceTab(QWidget):
         self.time_steps += 1
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for i, mass in enumerate(msg.data):
-            self.mass_labels[i].setText(f'Sensor {i+1}:\n{mass:.2f} g')
+            corrected_mass = mass - self.mass_offsets[i]
+            self.mass_labels[i].setText(f'Sensor {i+1}:\n{corrected_mass:.2f} g')
 
             with open(f"{self.data_directory}/mass_sensor_{i+1}.txt", "a") as file:
-                file.write(f"{timestamp}, {mass:.2f}\n")
+                file.write(f"{timestamp}, {corrected_mass:.2f}\n")
 
     def soil_moisture_callback(self, msg: Float32MultiArray):
         self.time_steps += 1
@@ -341,6 +408,35 @@ class ScienceTab(QWidget):
 
             with open(f"{self.data_directory}/soil_moisture_sensor_{i+1}.txt", "a") as file:
                 file.write(f"{timestamp}, {moisture:.2f}\n")
+
+    def tare_scale(self, index):
+        """Set current mass reading as zero point"""
+        current_text = self.mass_labels[index].text()
+        try:
+            # Extract current displayed value
+            current_value = float(current_text.split('\n')[1].replace(' g', ''))
+            # Update offset so current value becomes zero
+            self.mass_offsets[index] += current_value
+            # Log the taring operation
+            self.node.get_logger().info(f"Tared scale {index+1}, new offset: {self.mass_offsets[index]:.2f} g")
+        except (IndexError, ValueError) as e:
+            self.node.get_logger().warn(f"Could not tare scale {index+1}: {str(e)}")
+
+    def untare_scale(self, index):
+        """Reset the taring offset for the specified scale"""
+        self.mass_offsets[index] = 0.0
+        self.node.get_logger().info(f"Reset taring for scale {index+1}, offset set to 0")
+        
+        # Odśwież wyświetlaną wartość
+        current_text = self.mass_labels[index].text()
+        try:
+            # Extract current displayed value
+            current_value = float(current_text.split('\n')[1].replace(' g', ''))
+            # Update display with raw value (current_value + old offset)
+            raw_value = current_value + self.mass_offsets[index]
+            self.mass_labels[index].setText(f'Sensor {index+1}:\n{raw_value:.2f} g')
+        except (IndexError, ValueError) as e:
+            self.node.get_logger().warn(f"Could not update scale {index+1} display: {str(e)}")
 
     def send_command(self, index, value):
         self.update_servo_state(index, value)
