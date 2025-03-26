@@ -11,6 +11,7 @@ BUTTON_SELECTED_COLOR = "blue"
 # Konfiguracja agentów
 ANSIBLE_INVENTORY = "ansible_inventory.ini"
 AGENT_START_SCRIPT = "/home/legendary/kubatk/drive.sh" # skrypt musi pobierać 1 parametr (np: /dev/ttyUSB0)
+UNPLUG_PLUG_SCRIPT = "/home/legendary/kubatk/unplug.sh" #skrypt musi pobierać 1 parametr
 AUTONOMY_BASE_SCRIPT = "/home/legendary/kubatk/autonomy.sh"
 AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/autonomydrive.sh"
 

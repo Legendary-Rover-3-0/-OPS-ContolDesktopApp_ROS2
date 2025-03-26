@@ -60,12 +60,17 @@ class StatusTab(QWidget):
         ports_layout.addWidget(self.start_agent_screen_button)
         ports_layout.addStretch(20)
 
+        self.unplug_and_plug_button = QPushButton("🔌 Odłącz i podłącz Port")
+        self.unplug_and_plug_button.clicked.connect(lambda _: self.start_screen(config.UNPLUG_PLUG_SCRIPT ))
+        ports_layout.addWidget(self.unplug_and_plug_button)
+        ports_layout.addStretch(20)
+
         self.start_autonomy_button = QPushButton("🤖 Uruchom autonomie (baza)")
         self.start_autonomy_button.clicked.connect(self.start_autonomy)
         ports_layout.addWidget(self.start_autonomy_button)
         ports_layout.addStretch(100)
-        
-            # Screeny
+
+        # Screeny
         screens_layout = QVBoxLayout()
         self.label_screens = QLabel("Lista aktywnych screenów:")
         self.screen_list = QListWidget()

@@ -87,6 +87,7 @@ cam 2 i 3 manipulator
 
 
 sudo reboot
+sudo shutdown -h now 
 
 vncserver -list
 vncserver -kill :1

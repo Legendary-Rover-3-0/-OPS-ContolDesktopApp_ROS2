@@ -20,6 +20,10 @@ class ServaTab(QWidget):
         self.step_values = [10, 5, 10, 10]
         self.first_servo = 84
         
+        # Ograniczenia dla serwa 360°
+        self.min_360_angle = -360
+        self.max_360_angle = 360
+        
         self.init_ui()
         self.init_ros_publisher()
         self.select_first_available_gamepad()
@@ -155,6 +159,22 @@ class ServaTab(QWidget):
                 }
             """)
             
+            # Add reset button only for 360° Camera (index 0)
+            if i == 0:
+                reset_btn = QPushButton("●")
+                reset_btn.setStyleSheet("""
+                    QPushButton {
+                        font-size: 18px; 
+                        min-width: 50px;
+                        background-color: #505050;
+                        color: white;
+                    }
+                    QPushButton:hover {
+                        background-color: #606060;
+                    }
+                """)
+                reset_btn.clicked.connect(self.reset_360_servo)
+            
             increase_btn = QPushButton("►")
             increase_btn.setStyleSheet("""
                 QPushButton {
@@ -172,6 +192,8 @@ class ServaTab(QWidget):
             self.increase_buttons.append(increase_btn)
             
             control_layout.addWidget(decrease_btn)
+            if i == 0:
+                control_layout.addWidget(reset_btn)
             control_layout.addWidget(increase_btn)
             column_layout.addLayout(control_layout)
             
@@ -180,8 +202,17 @@ class ServaTab(QWidget):
             
             # Connect signals
             self.update_buttons[i].clicked.connect(lambda _, i=i: self.update_step_value(i))
-            self.increase_buttons[i].clicked.connect(lambda _, i=i: self.adjust_servo_position(i, self.step_values[i]))
-            self.decrease_buttons[i].clicked.connect(lambda _, i=i: self.adjust_servo_position(i, -self.step_values[i]))
+            
+            if i == 0:
+                # Special handling for 360° servo
+                self.increase_buttons[i].pressed.connect(lambda: self.adjust_servo_position(0, self.step_values[0]))
+                self.increase_buttons[i].released.connect(self.reset_360_servo)
+                self.decrease_buttons[i].pressed.connect(lambda: self.adjust_servo_position(0, -self.step_values[0]))
+                self.decrease_buttons[i].released.connect(self.reset_360_servo)
+            else:
+                # Standard handling for other servos
+                self.increase_buttons[i].clicked.connect(lambda _, i=i: self.adjust_servo_position(i, self.step_values[i]))
+                self.decrease_buttons[i].clicked.connect(lambda _, i=i: self.adjust_servo_position(i, -self.step_values[i]))
         
         self.servo_group.setLayout(servo_layout)
         main_layout.addWidget(self.servo_group)
@@ -230,6 +261,12 @@ class ServaTab(QWidget):
         
         self.setLayout(main_layout)
 
+    def reset_360_servo(self):
+        """Reset 360° servo to initial position"""
+        self.servo_positions[0] = self.first_servo
+        self.servo_labels[0].setText(f"Position: {self.servo_positions[0]}°")
+        self.publish_servo_positions()
+
     def init_ros_publisher(self):
         self.servo_publisher = self.node.create_publisher(Int32MultiArray, '/ESP32_GIZ/servo_angles_topic', 10)
 
@@ -262,9 +299,11 @@ class ServaTab(QWidget):
             self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
             self.publish_servo_positions()
         else:
+            # For other servos - standard 0-180° range
             self.servo_positions[index] = max(0, min(180, self.servo_positions[index] + delta))
-            self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
-            self.publish_servo_positions()
+        
+        self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
+        self.publish_servo_positions()
     
     def publish_servo_positions(self):
         msg = Int32MultiArray()
@@ -285,10 +324,7 @@ class ServaTab(QWidget):
                     if self.servo_positions[0] == self.first_servo:
                         self.adjust_servo_position(0, int(axis_0 * self.step_values[0]))
                 else:
-                    if self.servo_positions[0] != self.first_servo:
-                        self.servo_positions[0] = self.first_servo
-                        self.servo_labels[0].setText(f"Position: {self.servo_positions[0]}°")
-                        self.publish_servo_positions()
+                    self.reset_360_servo()
                 
                 if abs(axis_1) > dead_zone:
                     self.adjust_servo_position(1, int(axis_1 * self.step_values[1]))
