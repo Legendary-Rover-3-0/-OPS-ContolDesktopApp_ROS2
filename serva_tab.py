@@ -45,7 +45,7 @@ class ServaTab(QWidget):
                 border: 2px solid #444;
                 border-radius: 8px;
                 margin-top: 12px;
-                padding-top: 18px;
+                padding-top: 8px;
                 background-color: #333;
             }
             QLabel {
@@ -101,7 +101,7 @@ class ServaTab(QWidget):
             # Frame for each servo
             frame = QFrame()
             frame.setFrameShape(QFrame.Shape.StyledPanel)
-            frame.setStyleSheet("padding: 12px;")
+            frame.setStyleSheet("padding: 6px;")
             
             column_layout = QVBoxLayout(frame)
             column_layout.setSpacing(10)
@@ -238,7 +238,16 @@ class ServaTab(QWidget):
         """)
         self.gamepad_toggle_button.clicked.connect(self.toggle_gamepad)
         
-        # Keyboard instruction label
+        # Bottom row with two frames
+        bottom_row = QHBoxLayout()
+        bottom_row.setSpacing(15)
+        
+        # Keyboard instruction frame
+        instruction_frame = QFrame()
+        instruction_frame.setFrameShape(QFrame.Shape.StyledPanel)
+        instruction_frame.setStyleSheet("padding: 6px;")
+        
+        instruction_layout = QVBoxLayout(instruction_frame)
         instruction_label = QLabel("""
             <div style='font-size: 13px; color: #AAA;'>
             <b>KEYBOARD CONTROL:</b><br>
@@ -251,15 +260,69 @@ class ServaTab(QWidget):
             </div>
         """)
         instruction_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        instruction_layout.addWidget(instruction_label)
+        
+        # First servo position frame
+        first_servo_frame = QFrame()
+        first_servo_frame.setFrameShape(QFrame.Shape.StyledPanel)
+        first_servo_frame.setStyleSheet("padding: 6px;")
+        
+        first_servo_layout = QVBoxLayout(first_servo_frame)
+        first_servo_layout.setSpacing(10)
+        
+        first_servo_label = QLabel("<b>360° CAMERA SETTINGS</b>")
+        first_servo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        first_servo_layout.addWidget(first_servo_label)
+        
+        # Input for first servo position
+        input_layout = QHBoxLayout()
+        input_layout.addWidget(QLabel("Default position:"))
+        self.first_servo_input = QLineEdit(str(self.first_servo))
+        self.first_servo_input.setMaximumWidth(60)
+        self.first_servo_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        input_layout.addWidget(self.first_servo_input)
+        first_servo_layout.addLayout(input_layout)
+        
+        # Update button
+        update_first_servo_btn = QPushButton("Update Position")
+        update_first_servo_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #505050;
+                border: 1px solid #666;
+            }
+            QPushButton:hover {
+                background-color: #606060;
+            }
+        """)
+        update_first_servo_btn.clicked.connect(self.update_first_servo_position)
+        first_servo_layout.addWidget(update_first_servo_btn)
+        
+        # Add frames to bottom row
+        bottom_row.addWidget(instruction_frame)
+        bottom_row.addWidget(first_servo_frame)
         
         gamepad_layout.addWidget(self.gamepad_toggle_button)
-        gamepad_layout.addWidget(instruction_label)
+        gamepad_layout.addLayout(bottom_row)
         gamepad_group.setLayout(gamepad_layout)
         
         main_layout.addWidget(gamepad_group)
         main_layout.addItem(QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         
         self.setLayout(main_layout)
+
+    def update_first_servo_position(self):
+        """Update the first servo's default position"""
+        try:
+            new_value = int(self.first_servo_input.text())
+            if self.min_360_angle <= new_value <= self.max_360_angle:
+                self.first_servo = new_value
+                self.servo_positions[0] = new_value
+                self.servo_labels[0].setText(f"Position: {self.servo_positions[0]}°")
+                self.publish_servo_positions()
+            else:
+                print(f"Position should be between {self.min_360_angle} and {self.max_360_angle}")
+        except ValueError:
+            print("Invalid position value. Please enter a valid integer.")
 
     def reset_360_servo(self):
         """Reset 360° servo to initial position"""
