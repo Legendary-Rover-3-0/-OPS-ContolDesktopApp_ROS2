@@ -1,14 +1,17 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+                            QPushButton, QComboBox, QSlider)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 
 class ControlTab(QWidget):
-    def __init__(self, gamepads, toggle_manual_callback, toggle_kill_switch_callback, toggle_autonomy_callback):
+    def __init__(self, gamepads, toggle_manual_callback, toggle_kill_switch_callback, 
+                 toggle_autonomy_callback, update_speed_factor_callback):
         super().__init__()
         self.gamepads = gamepads
         self.toggle_kill_switch_callback = toggle_kill_switch_callback
         self.toggle_autonomy_callback = toggle_autonomy_callback
         self.toggle_manual_callback = toggle_manual_callback
+        self.update_speed_factor_callback = update_speed_factor_callback
         
         self.init_ui()
 
@@ -50,12 +53,29 @@ class ControlTab(QWidget):
             self.gamepad_selector.addItem(gamepad.get_name(), i)
         gamepad_section.addWidget(self.gamepad_selector)
 
+        # Dodajemy suwak do regulacji prędkości
+        speed_section = QVBoxLayout()
+        speed_section.addWidget(QLabel('Maksymalna prędkość:'))
+        
+        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
+        self.speed_slider.setRange(10, 100)  # 10% do 100%
+        self.speed_slider.setValue(100)  # Domyślnie 100%
+        self.speed_slider.setTickInterval(10)
+        self.speed_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.speed_slider.valueChanged.connect(self.on_speed_changed)
+        
+        self.speed_label = QLabel('100%')
+        self.speed_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        speed_section.addWidget(self.speed_slider)
+        speed_section.addWidget(self.speed_label)
+        gamepad_section.addLayout(speed_section)
+
         right_column.addLayout(gamepad_section)
 
         # Sekcja przycisków sterowania
         control_buttons = QVBoxLayout()
         control_buttons.addWidget(QLabel('Sterowanie:'))
-
 
         self.manual_drive_button = QPushButton('Manual Drive: OFF')
         self.manual_drive_button.clicked.connect(self.toggle_manual_callback)
@@ -72,7 +92,6 @@ class ControlTab(QWidget):
         self.style_button(self.kill_switch_button, '#FF5733')
         control_buttons.addWidget(self.kill_switch_button)
 
-
         right_column.addLayout(control_buttons)
 
         # Sekcja logo
@@ -86,9 +105,16 @@ class ControlTab(QWidget):
 
         right_column.setSpacing(20)
         right_column.setContentsMargins(10, 10, 10, 10)
-        main_layout.addLayout(right_column, stretch=4)  # 40% szerokości
+        main_layout.addLayout(right_column, stretch=4)
 
         self.setLayout(main_layout)
+
+    def on_speed_changed(self, value):
+        """Obsługa zmiany wartości suwaka"""
+        self.speed_label.setText(f'{value}%')
+        # Przelicz na współczynnik 0.1-1.0 i wywołaj callback
+        speed_factor = value / 100.0
+        self.update_speed_factor_callback(speed_factor)
 
     def update_button_state(self, button, text, state):
         color = '#2ECC71' if state else '#FF5733'  # Zielony/Czerwony

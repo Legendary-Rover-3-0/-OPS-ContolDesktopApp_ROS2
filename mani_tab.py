@@ -2,6 +2,7 @@ import threading
 import time
 import pygame
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QGroupBox, QGridLayout
+from PyQt6.QtWidgets import (QTextEdit, QScrollArea, QFrame)  # Dodaj te importy na górze pliku
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
 from std_msgs.msg import String  # Dodano String dla danych RFID
@@ -79,14 +80,34 @@ class ManipulatorTab(QWidget):
         self.mani_group.setLayout(mani_layout)
         main_layout.addWidget(self.mani_group)
 
-        # Sekcja RFID na dole
+        # Sekcja RFID z możliwością przewijania
         self.rfid_group = QGroupBox("RFID Data")
-        rfid_layout = QHBoxLayout()
-
-        self.rfid_label = QLabel(f"RFID: {self.rfid_data}")
-        self.rfid_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        rfid_layout.addWidget(self.rfid_label)
-
+        rfid_layout = QVBoxLayout()
+        
+        # Tworzymy obszar przewijania
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Tworzymy widget, który będzie zawierał tekst
+        self.rfid_text = QTextEdit()
+        self.rfid_text.setReadOnly(True)
+        self.rfid_text.setPlainText(self.rfid_data)
+        self.rfid_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #3a3a3a;
+                color: #ddd;
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 5px;
+                font-size: 14px;
+            }
+        """)
+        self.rfid_text.setMaximumHeight(300)  # Ogranicz wysokość
+        
+        scroll_area.setWidget(self.rfid_text)
+        rfid_layout.addWidget(scroll_area)
+        
         self.rfid_group.setLayout(rfid_layout)
         main_layout.addWidget(self.rfid_group)
 
@@ -138,7 +159,11 @@ class ManipulatorTab(QWidget):
 
     def rfid_callback(self, msg: String):
         self.rfid_data = msg.data
-        self.rfid_label.setText(f"RFID: {self.rfid_data}")
+        self.rfid_text.setPlainText(f"RFID: {self.rfid_data}")
+        # Przewiń na dół, aby pokazać najnowsze dane
+        self.rfid_text.verticalScrollBar().setValue(
+            self.rfid_text.verticalScrollBar().maximum()
+        )
 
     def set_selected_gamepad(self, gamepad):
         self.selected_gamepad = gamepad

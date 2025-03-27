@@ -45,8 +45,10 @@ class MainWindow(QMainWindow):
         self.reading_thread = None
         self.running = False
 
+        self.speed_factor = 1.0  # Domyślna wartość 100%
+
         self.tabs = QTabWidget()
-        self.control_tab = ControlTab(self.gamepads, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy)
+        self.control_tab = ControlTab(self.gamepads, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
         self.ros_node = ROSNode()
         self.science_tab = ScienceTab(self.ros_node)
         self.status_tab = StatusTab()
@@ -165,4 +167,12 @@ class MainWindow(QMainWindow):
 
                 self.ros_node.publish_gamepad_input(buttons, axes, hat)  # Teraz hat jest dodawany do axes
             pygame.time.wait(50)
+
+
+    def update_speed_factor(self, factor):
+        """Aktualizuje współczynnik prędkości w ROSNode"""
+        self.speed_factor = factor
+        self.ros_node.update_speed_factor(factor)
+
+
 

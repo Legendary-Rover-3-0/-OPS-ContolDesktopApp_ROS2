@@ -18,6 +18,8 @@ class ROSNode(Node):
         # self.camera_subscriptions = []
         # self.update_image_callback = update_image_callback
         self.bridge = CvBridge()
+        
+        self.speed_factor = 1.0  
 
         # Skalowanie prędkości
         self.max_linear_speed = 1.0  # Maksymalna prędkość liniowa (m/s)
@@ -74,8 +76,8 @@ class ROSNode(Node):
         max_trigger = max(left_trigger, right_trigger)
 
         twist_msg = Twist()
-        twist_msg.linear.x = self.max_linear_speed * (left_trigger + right_trigger) / 2
-        twist_msg.angular.z = self.max_angular_speed * (left_trigger - right_trigger) / 2
+        twist_msg.linear.x = self.max_linear_speed * (left_trigger + right_trigger) / 2 * self.speed_factor
+        twist_msg.angular.z = self.max_angular_speed * (left_trigger - right_trigger) / 2 * self.speed_factor
 
         self.cmd_vel_publisher.publish(twist_msg)
 
@@ -84,6 +86,9 @@ class ROSNode(Node):
         #msg.data = f'KillSwitch:{kill_switch};Autonomy:{autonomy};Extra:{extra}'
         msg.data = [manual, autonomy, kill_switch] #TODO: czy zmienic kolejnosc?
         self.button_publisher.publish(msg)
+
+    def update_speed_factor(self, factor):
+        self.speed_factor = factor  
 
     # def add_camera_subscription(self, topic, qos_profile):
     #     subscription = self.create_subscription(

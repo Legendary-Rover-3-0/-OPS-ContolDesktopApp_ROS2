@@ -39,6 +39,7 @@ class ScienceTab(QWidget):
         self.servo_states = [0] * 4
         self.drill_state = 0
         self.heater_state = 0
+        self.koszelnik_state = 0
 
         self.init_ui()
 
@@ -256,6 +257,27 @@ class ScienceTab(QWidget):
         drill_group.setLayout(drill_btn_layout)
         tools_layout.addWidget(drill_group)
 
+        # Remote Koszelnik Control
+        koszelnik_group = QGroupBox("Zdalny Koszelnik")
+        koszelnik_group.setFont(QFont('Arial', 11, QFont.Weight.Bold))
+        koszelnik_btn_layout = QHBoxLayout()
+        
+        self.koszelnik_on_button = QPushButton("🛠️ ON")
+        self.koszelnik_off_button = QPushButton("🍺 OFF")
+        
+        for btn in [self.koszelnik_on_button, self.koszelnik_off_button]:
+            btn.setFont(QFont('Arial', 11))
+            btn.setFixedHeight(40)
+            btn.setMinimumWidth(180)
+        
+        self.koszelnik_on_button.clicked.connect(lambda: self.send_koszelnik_command(True))
+        self.koszelnik_off_button.clicked.connect(lambda: self.send_koszelnik_command(False))
+        
+        koszelnik_btn_layout.addWidget(self.koszelnik_on_button)
+        koszelnik_btn_layout.addWidget(self.koszelnik_off_button)
+        koszelnik_group.setLayout(koszelnik_btn_layout)
+        tools_layout.addWidget(koszelnik_group)
+
         tools_group.setLayout(tools_layout)
         right_column.layout().addWidget(tools_group)
         right_column.layout().addStretch()
@@ -278,6 +300,9 @@ class ScienceTab(QWidget):
         self.update_button_style(self.wiertlo_off_button, config.BUTTON_OFF_COLOR)
         self.update_button_style(self.heater_on_button, config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.wiertlo_on_button, config.BUTTON_DEFAULT_COLOR)
+            # Ustawiamy domyślny styl przycisków Koszelnika
+        self.update_button_style(self.koszelnik_on_button, config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.koszelnik_off_button, config.BUTTON_OFF_COLOR)
         
         self.apply_styles()
         
@@ -369,10 +394,12 @@ class ScienceTab(QWidget):
         ]
         self.heater_publisher = self.node.create_publisher(Int8MultiArray, '/ESP32_GIZ/output_state_topic', 10)
 
+    # Modyfikujemy metody wysyłania komend, aby nie resetowały stanu Koszelnika:
+
     def send_heater_command(self, state: bool):
         self.heater_state = int(state)
         msg = Int8MultiArray()
-        msg.data = [self.drill_state, self.heater_state, 0]
+        msg.data = [self.drill_state, self.heater_state, self.koszelnik_state]  # Zachowaj obecny stan Koszelnika
         self.heater_publisher.publish(msg)
         self.update_button_style(self.heater_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.heater_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
@@ -380,10 +407,18 @@ class ScienceTab(QWidget):
     def send_wiertlo_command(self, state: bool):
         self.drill_state = int(state)
         msg = Int8MultiArray()
-        msg.data = [self.drill_state, self.heater_state, 0]
+        msg.data = [self.drill_state, self.heater_state, self.koszelnik_state]  # Zachowaj obecny stan Koszelnika
         self.heater_publisher.publish(msg)
         self.update_button_style(self.wiertlo_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.wiertlo_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
+
+    def send_koszelnik_command(self, state: bool):
+        self.koszelnik_state = int(state)
+        msg = Int8MultiArray()
+        msg.data = [self.drill_state, self.heater_state, self.koszelnik_state]
+        self.heater_publisher.publish(msg)
+        self.update_button_style(self.koszelnik_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.koszelnik_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
 
     def temperature_callback(self, msg: Float32MultiArray):
         self.time_steps += 1
