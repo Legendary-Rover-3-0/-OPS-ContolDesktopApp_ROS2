@@ -32,9 +32,10 @@ CAMERA_3_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_3_HANDLE} ! image/jpeg
 CAMERA_4_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_4_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=9123"
 
 # Science
+SERVO_LITTLE_OPEN_ANGLE = 140.0
 SERVO_CLOSED_ANGLE = 180.0        #  0% - domyslnie   0.0 stopni
 SERVO_OPEN_ANGLE = 90.0         # 50% - domyslnie  90.0 stopni
-SERVO_FULL_OPEN_ANGLE = 0.0   #100% - domyslnie 180.0 stopni  #Paweł M zamocował odwrotnie i 0 jest 180 a 180 jest 0 xD
+SERVO_FULL_OPEN_ANGLE = 10.0   #100% - domyslnie 180.0 stopni  #Paweł M zamocował odwrotnie i 0 jest 180 a 180 jest 0 xD
 
 AUTO_CLOSE_SERVOS_ON_APP_START = False # wysylanie zamkniecia serv science przy wlaczeniu apki
 AUTO_CLOSE_SERVOS_ON_APP_CLOSE = False # wysylanie zamkniecia serv science przy zamknieciu apki
