@@ -174,28 +174,33 @@ class ScienceTab(QWidget):
         servo_layout.setVerticalSpacing(8)
         servo_layout.setHorizontalSpacing(8)
 
+        self.little_open_buttons = []
         self.open_buttons = []
         self.close_buttons = []
         self.open_full_buttons = []
 
         for i in range(4):
+            little_open_btn = QPushButton(f"🔼 30% (S{i+1})")
             open_btn = QPushButton(f"🔼 50% (S{i+1})")
             close_btn = QPushButton(f"🔽 Close (S{i+1})")
             full_btn = QPushButton(f"🔼 100% (S{i+1})")
             
-            for btn in [open_btn, close_btn, full_btn]:
+            for btn in [little_open_btn, open_btn, close_btn, full_btn]:
                 btn.setFont(QFont('Arial', 11))
                 btn.setFixedHeight(40)
                 btn.setMinimumWidth(120)
             
+            little_open_btn.clicked.connect(lambda _, i=i: self.send_command(i, config.SERVO_LITTLE_OPEN_ANGLE))
             open_btn.clicked.connect(lambda _, i=i: self.send_command(i, config.SERVO_OPEN_ANGLE))
             close_btn.clicked.connect(lambda _, i=i: self.send_command(i, config.SERVO_CLOSED_ANGLE))
             full_btn.clicked.connect(lambda _, i=i: self.send_command(i, config.SERVO_FULL_OPEN_ANGLE))
             
-            servo_layout.addWidget(open_btn, i, 0)
-            servo_layout.addWidget(close_btn, i, 1)
-            servo_layout.addWidget(full_btn, i, 2)
+            servo_layout.addWidget(little_open_btn, i, 0)
+            servo_layout.addWidget(open_btn, i, 1)
+            servo_layout.addWidget(close_btn, i, 2)
+            servo_layout.addWidget(full_btn, i, 3)
             
+            self.little_open_buttons.append(little_open_btn)
             self.open_buttons.append(open_btn)
             self.close_buttons.append(close_btn)
             self.open_full_buttons.append(full_btn)
@@ -451,14 +456,22 @@ class ScienceTab(QWidget):
             self.update_button_style(self.open_buttons[index], config.BUTTON_ON_COLOR)
             self.update_button_style(self.close_buttons[index], config.BUTTON_DEFAULT_COLOR)
             self.update_button_style(self.open_full_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.little_open_buttons[index], config.BUTTON_DEFAULT_COLOR)
         elif value == config.SERVO_CLOSED_ANGLE:
             self.update_button_style(self.open_buttons[index], config.BUTTON_DEFAULT_COLOR)
             self.update_button_style(self.close_buttons[index], config.BUTTON_OFF_COLOR)
             self.update_button_style(self.open_full_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.little_open_buttons[index], config.BUTTON_DEFAULT_COLOR)
         elif value == config.SERVO_FULL_OPEN_ANGLE:
             self.update_button_style(self.open_buttons[index], config.BUTTON_DEFAULT_COLOR)
             self.update_button_style(self.close_buttons[index], config.BUTTON_DEFAULT_COLOR)
             self.update_button_style(self.open_full_buttons[index], config.BUTTON_ON_COLOR)
+            self.update_button_style(self.little_open_buttons[index], config.BUTTON_DEFAULT_COLOR)
+        elif value == config.SERVO_LITTLE_OPEN_ANGLE:
+            self.update_button_style(self.open_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.close_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.open_full_buttons[index], config.BUTTON_DEFAULT_COLOR)
+            self.update_button_style(self.little_open_buttons[index], config.BUTTON_ON_COLOR)
 
     def update_button_style(self, button, color):
         button.setStyleSheet(f"background-color: {color};")
