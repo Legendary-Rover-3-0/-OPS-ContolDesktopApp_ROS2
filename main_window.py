@@ -37,8 +37,34 @@ class MainWindow(QMainWindow):
         pygame.init()
 
         self.setWindowTitle('Stacja Operatorska 2.2')
-        self.setGeometry(100, 100, 800, 600)
-        self.setStyleSheet("background-color: #1e1e1e; color: white;")
+        self.setGeometry(100, 100, 1024, 768)  # Zwiększony rozmiar okna
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #1e1e1e;
+            }
+            QTabWidget::pane {
+                border: 1px solid #444;
+                background: #2d2d2d;
+            }
+            QTabBar::tab {
+                background: #333;
+                color: white;
+                padding: 12px 20px;
+                border: 1px solid #444;
+                border-bottom: none;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                font-size: 14px;
+                min-width: 120px;
+            }
+            QTabBar::tab:selected {
+                background: #505050;
+                border-color: #666;
+            }
+            QTabBar::tab:hover {
+                background: #404040;
+            }
+        """)
 
         self.gamepads = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
         self.selected_gamepad = None
@@ -48,6 +74,15 @@ class MainWindow(QMainWindow):
         self.speed_factor = 1.0  # Domyślna wartość 100%
 
         self.tabs = QTabWidget()
+        self.tabs.setTabPosition(QTabWidget.TabPosition.North)
+        self.tabs.setMovable(True)
+        self.tabs.setDocumentMode(False)
+        
+        # Zwiększenie czcionki w zakładkach
+        font = self.tabs.font()
+        font.setPointSize(12)
+        self.tabs.setFont(font)
+
         self.control_tab = ControlTab(self.gamepads, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
         self.ros_node = ROSNode()
         self.science_tab = ScienceTab(self.ros_node)
@@ -56,7 +91,6 @@ class MainWindow(QMainWindow):
         self.gps_tab = GPSTab(self.ros_node)
         self.mani_tab = ManipulatorTab(self.ros_node, self.gamepads)
         self.gvision_tab = CamerasTab()
-
 
         self.tabs.addTab(self.control_tab, 'Sterowanie')
         self.tabs.addTab(self.mani_tab, 'Manipulator')
@@ -77,6 +111,7 @@ class MainWindow(QMainWindow):
         self.autonomy_state = 0
         self.manual_drive_state = 0
         self.camera_windows = [None] * 4
+
 
     def toggle_kill_switch(self):
         # Wylaczenie skryptu jazdy autonomicznej
