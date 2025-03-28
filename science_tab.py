@@ -399,7 +399,7 @@ class ScienceTab(QWidget):
     def send_heater_command(self, state: bool):
         self.heater_state = int(state)
         msg = Int8MultiArray()
-        msg.data = [self.drill_state, self.heater_state, self.koszelnik_state]  # Zachowaj obecny stan Koszelnika
+        msg.data = [self.drill_state, self.koszelnik_state, self.heater_state]  # Zachowaj obecny stan Koszelnika
         self.heater_publisher.publish(msg)
         self.update_button_style(self.heater_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.heater_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
@@ -407,7 +407,7 @@ class ScienceTab(QWidget):
     def send_wiertlo_command(self, state: bool):
         self.drill_state = int(state)
         msg = Int8MultiArray()
-        msg.data = [self.drill_state, self.heater_state, self.koszelnik_state]  # Zachowaj obecny stan Koszelnika
+        msg.data = [self.drill_state, self.koszelnik_state, self.heater_state]  # Zachowaj obecny stan Koszelnika
         self.heater_publisher.publish(msg)
         self.update_button_style(self.wiertlo_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.wiertlo_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
@@ -415,7 +415,7 @@ class ScienceTab(QWidget):
     def send_koszelnik_command(self, state: bool):
         self.koszelnik_state = int(state)
         msg = Int8MultiArray()
-        msg.data = [self.drill_state, self.heater_state, self.koszelnik_state]
+        msg.data = [self.drill_state, self.koszelnik_state, self.heater_state]
         self.heater_publisher.publish(msg)
         self.update_button_style(self.koszelnik_on_button, config.BUTTON_ON_COLOR if state else config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.koszelnik_off_button, config.BUTTON_DEFAULT_COLOR if state else config.BUTTON_OFF_COLOR)
