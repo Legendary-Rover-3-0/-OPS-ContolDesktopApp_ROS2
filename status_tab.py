@@ -197,16 +197,16 @@ class StatusTab(QWidget):
         self.setWindowTitle("Zarządzanie agentami")
 
     def run_vision_script(self, cam):
-        """Uruchamia skrypt wizji na zdalnym hoście."""
+        """Uruchamia skrypt w screenie z automatycznym restartem"""
         commands = {
-            1: config.CAMERA_1_CMD,
-            2: config.CAMERA_2_CMD,
-            3: config.CAMERA_3_CMD,
-            4: config.CAMERA_4_CMD,
+            1: f"while true; do {config.CAMERA_1_CMD}; sleep 1; done",
+            2: f"while true; do {config.CAMERA_2_CMD}; sleep 1; done", 
+            3: f"while true; do {config.CAMERA_3_CMD}; sleep 1; done",
+            4: f"while true; do {config.CAMERA_4_CMD}; sleep 1; done"
         }
-
+    
         self.run_ansible(
-            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GStreamer_cam{cam} {commands[cam]}'",
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS camera{cam} bash -c \"{commands[cam]}\"'",
             callback=self.view_screens
         )
 
