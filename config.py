@@ -30,56 +30,60 @@ CAMERA_4_HANDLE = "/dev/video6"
 CAMERA_1_CMD = f"""
 while true; do
   echo "$(date): Starting Camera 1 (device={CAMERA_1_HANDLE})..." >> /tmp/camera1.log
-  timeout --kill-after=5s 10s gst-launch-1.0 -e v4l2src device={CAMERA_1_HANDLE} \
+  gst-launch-1.0 -e v4l2src device={CAMERA_1_HANDLE} \
     ! image/jpeg,width=1280,height=720,framerate=30/1 \
     ! jpegparse ! jpegdec ! videoconvert \
     ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast \
     ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=6123 \
-    >> /tmp/camera1_output.log 2>&1 \
-    || echo "$(date): Camera 1 crashed. Restarting..." >> /tmp/camera1.log
-  sleep 2;
+    >> /tmp/camera1_output.log 2>&1
+  EXIT_CODE=$?
+  echo "$(date): Camera 1 stopped with code $EXIT_CODE. Restarting in 2s..." >> /tmp/camera1.log
+  sleep 2
 done
 """
 
 CAMERA_2_CMD = f"""
 while true; do
   echo "$(date): Starting Camera 2 (device={CAMERA_2_HANDLE})..." >> /tmp/camera2.log
-  timeout --kill-after=5s 10s gst-launch-1.0 -e v4l2src device={CAMERA_2_HANDLE} \
+  gst-launch-1.0 -e v4l2src device={CAMERA_2_HANDLE} \
     ! image/jpeg,width=1280,height=720,framerate=30/1 \
     ! jpegparse ! jpegdec ! videoconvert \
     ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast \
     ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=7123 \
-    >> /tmp/camera2_output.log 2>&1 \
-    || echo "$(date): Camera 2 crashed. Restarting..." >> /tmp/camera2.log
-  sleep 2;
+    >> /tmp/camera2_output.log 2>&1
+  EXIT_CODE=$?
+  echo "$(date): Camera 2 stopped with code $EXIT_CODE. Restarting in 2s..." >> /tmp/camera2.log
+  sleep 2
 done
 """
 
 CAMERA_3_CMD = f"""
 while true; do
   echo "$(date): Starting Camera 3 (device={CAMERA_3_HANDLE})..." >> /tmp/camera3.log
-  timeout --kill-after=5s 10s gst-launch-1.0 -e v4l2src device={CAMERA_3_HANDLE} \
+  gst-launch-1.0 -e v4l2src device={CAMERA_3_HANDLE} \
     ! image/jpeg,width=1280,height=720,framerate=30/1 \
     ! jpegparse ! jpegdec ! videoconvert \
     ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast \
     ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=8123 \
-    >> /tmp/camera3_output.log 2>&1 \
-    || echo "$(date): Camera 3 crashed. Restarting..." >> /tmp/camera3.log
-  sleep 2;
+    >> /tmp/camera3_output.log 2>&1
+  EXIT_CODE=$?
+  echo "$(date): Camera 3 stopped with code $EXIT_CODE. Restarting in 2s..." >> /tmp/camera3.log
+  sleep 2
 done
 """
 
 CAMERA_4_CMD = f"""
 while true; do
   echo "$(date): Starting Camera 4 (device={CAMERA_4_HANDLE})..." >> /tmp/camera4.log
-  timeout --kill-after=5s 10s gst-launch-1.0 -e v4l2src device={CAMERA_4_HANDLE} \
+  gst-launch-1.0 -e v4l2src device={CAMERA_4_HANDLE} \
     ! image/jpeg,width=1280,height=720,framerate=30/1 \
     ! jpegparse ! jpegdec ! videoconvert \
     ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast \
     ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=9123 \
-    >> /tmp/camera4_output.log 2>&1 \
-    || echo "$(date): Camera 4 crashed. Restarting..." >> /tmp/camera4.log
-  sleep 2;
+    >> /tmp/camera4_output.log 2>&1
+  EXIT_CODE=$?
+  echo "$(date): Camera 4 stopped with code $EXIT_CODE. Restarting in 2s..." >> /tmp/camera4.log
+  sleep 2
 done
 """
 
