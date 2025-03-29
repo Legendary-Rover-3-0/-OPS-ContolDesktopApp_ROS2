@@ -6,6 +6,7 @@ from rclpy.node import Node
 from std_msgs.msg import Int32MultiArray
 import threading
 import pygame
+import time
 
 class ServaTab(QWidget):
     def __init__(self, node: Node, gamepads):
@@ -23,6 +24,16 @@ class ServaTab(QWidget):
         # Ograniczenia dla serwa 360°
         self.min_360_angle = -360
         self.max_360_angle = 360
+        
+        # Gamepad control variables
+        self.last_gamepad_update = 0
+        self.gamepad_update_interval = 0.2  # seconds between updates
+        self.gamepad_buttons_pressed = {
+            'axis_0': False,
+            'axis_1': False,
+            'axis_2': False,
+            'axis_3': False
+        }
         
         self.init_ui()
         self.init_ros_publisher()
@@ -358,12 +369,21 @@ class ServaTab(QWidget):
     
     def adjust_servo_position(self, index, delta):
         if index == 0:
-            self.servo_positions[index] = self.first_servo + delta
-            self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
-            self.publish_servo_positions()
+            # Special handling for 360° servo
+            new_position = self.servo_positions[index] + delta
+            if new_position < self.min_360_angle:
+                new_position = self.min_360_angle
+            elif new_position > self.max_360_angle:
+                new_position = self.max_360_angle
+            self.servo_positions[index] = new_position
         else:
-            # For other servos - standard 0-180° range
-            self.servo_positions[index] = max(0, min(180, self.servo_positions[index] + delta))
+            # Standard handling for 180° servos
+            new_position = self.servo_positions[index] + delta
+            if new_position < 0:
+                new_position = 0
+            elif new_position > 180:
+                new_position = 180
+            self.servo_positions[index] = new_position
         
         self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
         self.publish_servo_positions()
@@ -375,24 +395,43 @@ class ServaTab(QWidget):
     
     def read_gamepad(self):
         dead_zone = 0.8
+        clock = pygame.time.Clock()
         
         while self.running and self.selected_gamepad:
             if self.is_gamepad_active:
                 pygame.event.pump()
-            
-                axis_0 = self.selected_gamepad.get_axis(3)  # Left stick X
-                axis_1 = self.selected_gamepad.get_axis(4)  # Right stick Y
+                current_time = time.time()
                 
-                if abs(axis_0) > dead_zone:
-                    if self.servo_positions[0] == self.first_servo:
-                        self.adjust_servo_position(0, int(axis_0 * self.step_values[0]))
-                else:
-                    self.reset_360_servo()
+                # Check axes only if enough time has passed since last update
+                if current_time - self.last_gamepad_update >= self.gamepad_update_interval:
+                    axis_0 = self.selected_gamepad.get_axis(3)  # Left stick X (360° servo)
+                    axis_1 = self.selected_gamepad.get_axis(4)  # Right stick Y (180° camera)
+                    
+                    # Handle 360° servo (index 0)
+                    if abs(axis_0) > dead_zone:
+                        if not self.gamepad_buttons_pressed['axis_0']:
+                            # Single position change
+                            self.adjust_servo_position(0, int(axis_0 * self.step_values[0]))
+                            self.gamepad_buttons_pressed['axis_0'] = True
+                            self.last_gamepad_update = current_time
+                    else:
+                        if self.gamepad_buttons_pressed['axis_0']:
+                            self.reset_360_servo()
+                            self.gamepad_buttons_pressed['axis_0'] = False
+                    
+                    # Handle 180° servo (index 1)
+                    if abs(axis_1) > dead_zone:
+                        if not self.gamepad_buttons_pressed['axis_1']:
+                            # Single position change
+                            self.adjust_servo_position(1, int(axis_1 * self.step_values[1]))
+                            self.gamepad_buttons_pressed['axis_1'] = True
+                            self.last_gamepad_update = current_time
+                    else:
+                        self.gamepad_buttons_pressed['axis_1'] = False
                 
-                if abs(axis_1) > dead_zone:
-                    self.adjust_servo_position(1, int(axis_1 * self.step_values[1]))
-            
-            pygame.time.wait(100)
+                clock.tick(30)  # Limit to 30 FPS
+            else:
+                pygame.time.wait(100)
     
     def toggle_gamepad(self):
         self.is_gamepad_active = not self.is_gamepad_active
@@ -447,9 +486,7 @@ class ServaTab(QWidget):
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_A or event.key() == Qt.Key.Key_D:
-            self.servo_positions[0] = self.first_servo
-            self.servo_labels[0].setText(f"Position: {self.servo_positions[0]}°")
-            self.publish_servo_positions()
+            self.reset_360_servo()
 
     def closeEvent(self, event):
         self.running = False

@@ -211,7 +211,7 @@ class StatusTab(QWidget):
         )
 
     def stop_vision_script(self, cam):
-        """UZatrzymianie skryptu wizji na zdalnym hoście."""
+        """Zatrzymuje skrypt wizji i zamyka powiązany screen"""
         commands = {
             1: config.CAMERA_1_HANDLE,
             2: config.CAMERA_2_HANDLE,
@@ -220,7 +220,10 @@ class StatusTab(QWidget):
         }
 
         self.run_ansible(
-            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'fuser -k {commands[cam]}'",
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '"
+            f"fuser -k {commands[cam]}; "  # Zabija proces GStreamera
+            f"screen -S camera{cam} -X quit'"  # Zamyka screen
+            f"",
             callback=self.view_screens
         )
 
