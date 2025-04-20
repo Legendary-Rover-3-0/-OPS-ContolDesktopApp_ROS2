@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButt
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette, QFont
 from rclpy.node import Node
-from std_msgs.msg import Int32, Float32MultiArray, Int8MultiArray
+from std_msgs.msg import Int32, Float32MultiArray, Int8MultiArray, Float32
 import os
 import datetime
 import config
@@ -23,6 +23,9 @@ class ScienceTab(QWidget):
         self.temperature_history = [[] for _ in range(4)]
         self.mass_history = [[] for _ in range(4)]
         self.soil_moisture_history = [[] for _ in range(4)]
+        self.radiation_history = [[]]
+        self.gas_history = [[] for _ in range(4)]
+        self.pH_history = [[]]
         self.time_steps = 0
         self.update_interval = 5
         self.update_counter = 0
@@ -154,6 +157,74 @@ class ScienceTab(QWidget):
         self.soil_moisture_group.setLayout(soil_layout)
         left_column.addWidget(self.soil_moisture_group)
 
+        #Radiation Group
+        self.radiation_group = QGroupBox("☢️ Radiation Sensors")
+        self.radiation_group.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        radiation_layout = QGridLayout()
+        radiation_layout.setSpacing(10)
+        self.radiation_labels = []
+        for i in range(1):
+            frame = QFrame()
+            frame.setFrameShape(QFrame.Shape.StyledPanel)
+            frame.setLineWidth(1)
+            frame_layout = QVBoxLayout(frame)
+            
+            label = QLabel(f"Sensor {i+1}:\n---")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setFont(QFont('Arial', 11))
+            self.radiation_labels.append(label)
+            frame_layout.addWidget(label)
+            
+            radiation_layout.addWidget(frame, i//2, i%2)
+        self.radiation_group.setLayout(radiation_layout)
+        #left_column.addWidget(self.radiation_group)
+
+        # Gases Group
+        self.gases_group = QGroupBox("💨 Gases Sensors")
+        self.gases_group.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        gases_layout = QGridLayout()
+        gases_layout.setSpacing(10)
+        self.gases_labels = []
+        for i in range(4):
+            frame = QFrame()
+            frame.setFrameShape(QFrame.Shape.StyledPanel)
+            frame.setLineWidth(1)
+            frame_layout = QVBoxLayout(frame)
+            
+            label = QLabel(f"Sensor {i+1}:\n---")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setFont(QFont('Arial', 11))
+            self.gases_labels.append(label)
+            frame_layout.addWidget(label)
+            
+            gases_layout.addWidget(frame, i//2, i%2)
+        self.gases_group.setLayout(gases_layout)
+        left_column.addWidget(self.gases_group)
+
+
+        #pH Group
+        self.pH_group = QGroupBox("💧 pH Sensors")
+        self.pH_group.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        pH_layout = QGridLayout()
+        pH_layout.setSpacing(10)
+        self.pH_labels = []
+        for i in range(1):
+            frame = QFrame()
+            frame.setFrameShape(QFrame.Shape.StyledPanel)
+            frame.setLineWidth(1)
+            frame_layout = QVBoxLayout(frame)
+            
+            label = QLabel(f"Sensor {i+1}:\n---")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setFont(QFont('Arial', 11))
+            self.pH_labels.append(label)
+            frame_layout.addWidget(label)
+            
+            pH_layout.addWidget(frame, i//2, i%2)
+        self.pH_group.setLayout(pH_layout)
+        
+
+
         # Plot button at the bottom
         self.plot_app_button = QPushButton('📈 Open Plot App')
         self.plot_app_button.setFont(QFont('Arial', 12))
@@ -208,7 +279,7 @@ class ScienceTab(QWidget):
 
         servo_group.setLayout(servo_layout)
         right_column.layout().addWidget(servo_group)
-
+        
         # Tools Control Group
         tools_group = QGroupBox("Tools Control")
         tools_group.setFont(QFont('Arial', 12, QFont.Weight.Bold))
@@ -280,6 +351,10 @@ class ScienceTab(QWidget):
 
         tools_group.setLayout(tools_layout)
         right_column.layout().addWidget(tools_group)
+
+        right_column.layout().addWidget(self.pH_group)
+        right_column.layout().addWidget(self.radiation_group)
+
         right_column.layout().addStretch()
 
         # Auto-close servos if configured
@@ -288,6 +363,7 @@ class ScienceTab(QWidget):
         else:
             for index in range(4):
                 self.update_servo_state(index, config.SERVO_CLOSED_ANGLE)
+
 
         # Add columns to main layout
         main_layout.addLayout(left_column, 1)
@@ -387,6 +463,12 @@ class ScienceTab(QWidget):
         self.node.create_subscription(Float32MultiArray, '/temperature_data', self.temperature_callback, 10)
         self.node.create_subscription(Float32MultiArray, '/mass_data', self.mass_callback, 10)
         self.node.create_subscription(Float32MultiArray, '/soil_moisture_data', self.soil_moisture_callback, 10)
+        self.node.create_subscription(Float32, '/Radiation_Publisher', self.Radiation_Publisher_callback, 10)
+        self.node.create_subscription(Float32MultiArray, '/Gases_Publisher', self.Gases_Publisher_callback, 10)
+        #################################################
+        #################################################
+        #################################################
+        self.node.create_subscription(Float32, '/ph_sensor', self.ph_callback, 10) 
 
     def init_ros_publishers(self):
         self.servo_publishers = [
@@ -448,6 +530,31 @@ class ScienceTab(QWidget):
 
             with open(f"{self.data_directory}/soil_moisture_sensor_{i+1}.txt", "a") as file:
                 file.write(f"{timestamp}, {moisture:.2f}\n")
+
+    def Radiation_Publisher_callback(self, msg: Float32):
+        self.time_steps += 1
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.radiation_labels[0].setText(f'Sensor 1:\n{msg.data:.2f}')
+
+        with open(f"{self.data_directory}/radiation_sensor.txt", "a") as file:
+            file.write(f"{timestamp}, {msg.data:.2f}\n")
+
+    def Gases_Publisher_callback(self, msg: Float32MultiArray):
+        self.time_steps += 1
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        for i, gas in enumerate(msg.data):
+            self.gases_labels[i].setText(f'Sensor {i+1}:\n{gas:.2f}')
+
+            with open(f"{self.data_directory}/gas_sensor_{i+1}.txt", "a") as file:
+                file.write(f"{timestamp}, {gas:.2f}\n")
+
+    def ph_callback(self, msg: Float32):
+        self.time_steps += 1
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.pH_labels[0].setText(f'Sensor 1:\n{msg.data:.2f}')
+
+        with open(f"{self.data_directory}/ph_sensor.txt", "a") as file:
+            file.write(f"{timestamp}, {msg.data:.2f}\n")
 
     def tare_scale(self, index):
         """Set current mass reading as zero point"""
