@@ -3,3 +3,4 @@ folium
 ansible
 pygame
 PyQt6-WebEngine
+tkintermapview
