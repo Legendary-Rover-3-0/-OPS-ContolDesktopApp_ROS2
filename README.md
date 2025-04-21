@@ -19,3 +19,5 @@ python3 main.py
 - w przypdaku gdy nie masz komunikacji między bulletami sprawdź jaki masz adres IP, a także czy adres ip Jetsona jest 192.168.2.100 (przy komunikcji przez bullety)
 - można zmiejszyć rozdzelczość kamerek w wizji w pliku config.py
 - można zmienić domyślną wartość dla wartości początkowej manipulatora w config.py
+
+#ZMIANY NIE ZOSTAŁY TESTOWANE
