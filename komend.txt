@@ -95,3 +95,12 @@ vncserver -kill :1
 vncserver :1 -localhost no -geometry 1920x1080
 
 
+scp legendary@192.168.2.100:/home/legendary/.ros/rtabmap.db ~/home
+
+
+===========================
+
+lsof /dev/ttyUSB0 (sprawdza czy port jest w użyciu - czy jakiś proces korzysta z danego portu)
+
+
+
