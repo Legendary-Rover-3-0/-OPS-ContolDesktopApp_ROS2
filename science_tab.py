@@ -191,7 +191,19 @@ class ScienceTab(QWidget):
             frame.setLineWidth(1)
             frame_layout = QVBoxLayout(frame)
             
-            label = QLabel(f"Sensor {i+1}:\n---")
+            
+            #label = QLabel(f"Sensdskajdsaor {i+1}:\n---")
+            
+            if i == 0:
+                label = QLabel("Propan (ppm)")
+            if i == 1:
+                label = QLabel("Butan (ppm)")
+            if i == 2:
+                label = QLabel("CO (ppm)")
+            if i == 3:
+                label = QLabel("-")
+            
+            
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setFont(QFont('Arial', 11))
             self.gases_labels.append(label)
@@ -308,7 +320,7 @@ class ScienceTab(QWidget):
         tools_layout.addWidget(heater_group)
 
         # Drill Control
-        drill_group = QGroupBox("Drill")
+        drill_group = QGroupBox("Pompka #1")
         drill_group.setFont(QFont('Arial', 11, QFont.Weight.Bold))
         drill_btn_layout = QHBoxLayout()
         

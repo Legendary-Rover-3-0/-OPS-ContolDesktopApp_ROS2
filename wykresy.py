@@ -86,7 +86,7 @@ class PlotApp(QWidget):
             'temperature': "temperature_sensor_{}.txt",
             'mass': "mass_sensor_{}.txt",
             'soil_moisture': "soil_moisture_sensor_{}.txt",
-            'gasses': "gasses_sensor_{}.txt",
+            'gasses': "gas_sensor_{}.txt",
             'ph': "ph_sensor.txt",
             'radiation': "radiation_sensor.txt"
         }
@@ -99,7 +99,7 @@ class PlotApp(QWidget):
                 'soil_moisture': "Soil Moisture",
                 'gasses': "Gasses",
                 'ph': "pH",
-                'radiation': "Radiation (Sv/h)"
+                'radiation': "Radiation (uS/h)"
             }
             ylabel = ylabel_dict[plot_type]
         else:
@@ -135,6 +135,6 @@ class PlotApp(QWidget):
 if __name__ == "__main__":
     app = QApplication([])
     plot_app = PlotApp()
-    plot_app.gas_sensor_names = ['Propan', 'Butan', 'CO', 'H2']
+    plot_app.gas_sensor_names = ['Propan', 'Butan', 'CO', '-']
     plot_app.show()
     app.exec()

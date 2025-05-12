@@ -6,56 +6,56 @@ from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+import threading # Import threading
 
 class ROSNode(Node):
     def __init__(self):
-    #def __init__(self, update_image_callback):
         super().__init__('ros_node')
         self.gamepad_publisher = self.create_publisher(Joy, 'gamepad_input', 10)
         self.button_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/led_state_topic', 10)
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10)
-        
-        # self.camera_subscriptions = []
-        # self.update_image_callback = update_image_callback
+
         self.bridge = CvBridge()
-        
-        self.speed_factor = 1.0  
+
+        self.speed_factor = 1.0
 
         # Skalowanie prędkości
         self.max_linear_speed = 1.0  # Maksymalna prędkość liniowa (m/s)
         self.max_angular_speed = 1.0  # Maksymalna prędkość kątowa (rad/s)
 
-        # # Subskrypcja /cmd_vel
-        # self.cmd_vel_subscription = self.create_subscription(
-        #     Twist, '/cmd_vel', self.cmd_vel_listener, 10
-        # )
+        self._timed_move_active = False # Flag to indicate if a timed move is active
+        self._timed_move_timer = None # Timer for timed moves
 
-    # def cmd_vel_listener(self, msg):
-    #     # Przekazanie danych z /cmd_vel do callbacka
-    #     if self.cmd_vel_callback:
-    #         self.cmd_vel_callback(msg)
+    def publish_gamepad_input(self, buttons, axes, hat=(0, 0)):
+        if self._timed_move_active:
+            return # Do not publish gamepad input if timed move is active
 
-    def publish_gamepad_input(self, buttons, axes, hat=(0, 0)):  
-        hat_x, hat_y = float(hat[0]), float(hat[1])  # Konwersja int -> float
-        axes.extend([hat_x, hat_y])  # Dodanie poprawnych wartości do listy axes
+        hat_x, hat_y = float(hat[0]), float(hat[1])
+        axes.extend([hat_x, hat_y])
 
         msg = Joy()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.axes = axes  # Teraz zawiera także hat_x i hat_y jako float
-        msg.buttons = buttons  
+        msg.axes = axes
+        msg.buttons = buttons
         self.gamepad_publisher.publish(msg)
 
-        self.publish_cmd_vel(axes, buttons)  
+        self.publish_cmd_vel(axes, buttons)
 
-    
-    def publish_empty_gamepad_input(self):  
+
+    def publish_empty_gamepad_input(self):
+        if self._timed_move_active:
+            return # Do not publish empty input if timed move is active
+            
         msg = Joy()
         self.gamepad_publisher.publish(msg)
 
-        self.publish_cmd_vel()  
+        self.publish_cmd_vel()
 
 
     def publish_cmd_vel(self, axes=None, buttons=None):
+        if self._timed_move_active:
+            return # Do not publish gamepad cmd_vel if timed move is active
+
         if axes is None or buttons is None:
             twist_msg = Twist()
             twist_msg.linear.x = 0.0
@@ -73,8 +73,6 @@ class ROSNode(Node):
         left_trigger = (axes[5] + 1) / 2 * (-1 if reverse_mode_left else 1)
         right_trigger = (axes[2] + 1) / 2 * (-1 if reverse_mode_right else 1)
 
-        max_trigger = max(left_trigger, right_trigger)
-
         twist_msg = Twist()
         twist_msg.linear.x = self.max_linear_speed * (left_trigger + right_trigger) / 2 * self.speed_factor
         twist_msg.angular.z = self.max_angular_speed * (left_trigger - right_trigger) / 2 * self.speed_factor
@@ -83,27 +81,14 @@ class ROSNode(Node):
 
     def publish_button_states(self, kill_switch, autonomy, manual):
         msg = Int8MultiArray()
-        #msg.data = f'KillSwitch:{kill_switch};Autonomy:{autonomy};Extra:{extra}'
-        msg.data = [manual, autonomy, kill_switch] #TODO: czy zmienic kolejnosc?
+        msg.data = [manual, autonomy, kill_switch]
         self.button_publisher.publish(msg)
 
     def update_speed_factor(self, factor):
-        self.speed_factor = factor  
+        self.speed_factor = factor
 
-    # def add_camera_subscription(self, topic, qos_profile):
-    #     subscription = self.create_subscription(
-    #         CompressedImage,  # Zmiana z Image na CompressedImage
-    #         topic,
-    #         lambda msg, idx=len(self.camera_subscriptions): self.camera_callback(msg, idx),
-    #         10)
-    #     self.camera_subscriptions.append(subscription)
-
-    # def camera_callback(self, msg, idx):
-    #     try:
-    #         # Dekodowanie skompresowanego obrazu
-    #         np_arr = np.frombuffer(msg.data, np.uint8)
-    #         cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-    #         if cv_image is not None:
-    #             self.update_image_callback(cv_image, idx)
-    #     except Exception as e:
-    #         self.get_logger().error(f"Błąd dekodowania obrazu: {e}")
+    def publish_cmd_vel_timed(self, linear_x, angular_z):
+        twist_msg = Twist()
+        twist_msg.linear.x = linear_x
+        twist_msg.angular.z = angular_z
+        self.cmd_vel_publisher.publish(twist_msg)
