@@ -24,31 +24,31 @@ class ControlTab(QWidget):
                 "name": "Autonomia v.2.1",
                 "linear_x": 0.2,
                 "angular_z": 0.0,
-                "duration": 7.0
+                "duration": 3.0
             },
             {
                 "name": "Autonomia v.2.2",
                 "linear_x": 0.2,
                 "angular_z": 0.0,
-                "duration": 9.0
+                "duration": 4.0
             },
             {
                 "name": "Autonomia v.2.3",
                 "linear_x": 0.2,
                 "angular_z": 0.0,
-                "duration": 10.0
+                "duration": 5.0
             },
             {
                 "name": "Autonomia v.2.4",
                 "linear_x": 0.2,
                 "angular_z": 0.0,
-                "duration": 11.0
+                "duration": 6.0
             },
             {
                 "name": "Autonomia v.2.5",
                 "linear_x": 0.2,
                 "angular_z": 0.0,
-                "duration": 24.0
+                "duration": 7.0
             },
         ]
 

@@ -10,7 +10,7 @@ class Giz2Tab(QWidget):
         self.node = node
         
         # Initialize states
-        self.servo_positions = [90, 90, 90, 90]
+        self.servo_positions = [150, 50, 90, 0]
         self.output_states = {
             "drill": 0,
             "koszelnik": 0,
@@ -25,17 +25,17 @@ class Giz2Tab(QWidget):
         # Publishers for the second ESP32 GIZ
         self.servo_publisher = self.node.create_publisher(
             Int32MultiArray, 
-            '/ESP32_GIZ_2/servo_angles_topic', 
+            '/ESP32_GIZ_v2/servo_angles_topic', 
             10
         )
         self.output_publisher = self.node.create_publisher(
             Int8MultiArray, 
-            '/ESP32_GIZ_2/output_state_topic', 
+            '/ESP32_GIZ_v2/output_state_topic', 
             10
         )
         self.led_publisher = self.node.create_publisher(
             Int8MultiArray, 
-            '/ESP32_GIZ_2/led_state_topic', 
+            '/ESP32_GIZ_v2/led_state_topic', 
             10
         )
 
@@ -44,11 +44,6 @@ class Giz2Tab(QWidget):
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(15)
 
-        # Add title for the tab
-        title_label = QLabel("ESP32 GIZ 2 Control Panel")
-        title_label.setFont(QFont('Arial', 16, QFont.Weight.Bold))
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(title_label)
 
         # Servo Control Section
         servo_group = QGroupBox("Servo Control")
@@ -57,30 +52,69 @@ class Giz2Tab(QWidget):
         
         self.servo_buttons = []
         
+        
         for i in range(4):
             frame = QFrame()
             frame.setFrameShape(QFrame.Shape.StyledPanel)
             frame.setLineWidth(1)
             frame_layout = QVBoxLayout(frame)
             
-            label = QLabel(f"Servo {i+1}")
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setFont(QFont('Arial', 11, QFont.Weight.Bold))
             
             pos0_btn = QPushButton("0°")
             pos0_btn.clicked.connect(lambda _, idx=i: self.set_servo_position(idx, 0))
             
+            pos50_btn = QPushButton("50°")
+            pos50_btn.clicked.connect(lambda _, idx=i: self.set_servo_position(idx, 50))
+            
+            pos60_btn = QPushButton("60°")
+            pos60_btn.clicked.connect(lambda _, idx=i: self.set_servo_position(idx, 60))
+
             pos90_btn = QPushButton("90°")
             pos90_btn.clicked.connect(lambda _, idx=i: self.set_servo_position(idx, 90))
             
+            pos120_btn = QPushButton("120°")
+            pos120_btn.clicked.connect(lambda _, idx=i: self.set_servo_position(idx, 120))
+
+            pos150_btn = QPushButton("150°")
+            pos150_btn.clicked.connect(lambda _, idx=i: self.set_servo_position(idx, 150))
+            
             pos180_btn = QPushButton("180°")
             pos180_btn.clicked.connect(lambda _, idx=i: self.set_servo_position(idx, 180))
+
             
             btn_layout = QHBoxLayout()
-            btn_layout.addWidget(pos0_btn)
-            btn_layout.addWidget(pos90_btn)
-            btn_layout.addWidget(pos180_btn)
+     
+            if i == 0:
+                label = QLabel("1: Woda (niebieski)")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setFont(QFont('Arial', 11, QFont.Weight.Bold))
+                btn_layout.addWidget(pos150_btn)
+                btn_layout.addWidget(pos0_btn)
+
+            if i == 1:
+                label = QLabel("2: Apteczka (czerwony)")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setFont(QFont('Arial', 11, QFont.Weight.Bold))
+                btn_layout.addWidget(pos50_btn)
+                btn_layout.addWidget(pos180_btn)
+
+            if i == 2:
+                label = QLabel("3: Amuncija (szary)")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setFont(QFont('Arial', 11, QFont.Weight.Bold))
+                btn_layout.addWidget(pos90_btn)
+                btn_layout.addWidget(pos0_btn)
+
+            if i == 3:
+                label = QLabel("4: Jedzenie (bialy)")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setFont(QFont('Arial', 11, QFont.Weight.Bold))
+                btn_layout.addWidget(pos0_btn)
+                btn_layout.addWidget(pos180_btn)
+
+
             
+
             frame_layout.addWidget(label)
             frame_layout.addLayout(btn_layout)
             
@@ -274,7 +308,7 @@ class Giz2Tab(QWidget):
         # Update button styling
         for i, buttons in enumerate(self.servo_buttons):
             if i == index:
-                pos_idx = position // 90  # 0, 1, or 2 for 0°, 90°, 180°
+                pos_idx = 7  # 0, 1, or 2 for 0°, 90°, 180°
                 for j, btn in enumerate(buttons):
                     if j == pos_idx:
                         btn.setStyleSheet("background-color: #2ECC71;")
