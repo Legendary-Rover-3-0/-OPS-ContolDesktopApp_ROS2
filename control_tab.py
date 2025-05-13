@@ -5,15 +5,14 @@ from PyQt6.QtGui import QPixmap
 import time # Import time for potential delays between movements if needed later
 
 class ControlTab(QWidget):
-    def __init__(self, gamepads, toggle_manual_callback, toggle_kill_switch_callback,
-                 toggle_autonomy_callback, update_speed_factor_callback):
+    def __init__(self, ros_node, gamepads, toggle_manual_callback, toggle_kill_switch_callback, toggle_autonomy_callback, update_speed_factor_callback):
         super().__init__()
         self.gamepads = gamepads
         self.toggle_kill_switch_callback = toggle_kill_switch_callback
         self.toggle_autonomy_callback = toggle_autonomy_callback
         self.toggle_manual_callback = toggle_manual_callback
         self.update_speed_factor_callback = update_speed_factor_callback
-        #self.ros_node = ros_node
+        self.ros_node = ros_node
 
         self.move_timer = QTimer(self)
         self.move_timer.timeout.connect(self.stop_movement)

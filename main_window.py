@@ -83,9 +83,15 @@ class MainWindow(QMainWindow):
         font = self.tabs.font()
         font.setPointSize(12)
         self.tabs.setFont(font)
-
-        self.control_tab = ControlTab(self.gamepads, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
         self.ros_node = ROSNode()
+        self.control_tab = ControlTab(
+            self.ros_node,
+            self.gamepads,
+            self.toggle_manual_callback,
+            self.toggle_kill_switch,
+            self.toggle_autonomy,
+            self.update_speed_factor
+        )
         self.science_tab = ScienceTab(self.ros_node)
         self.status_tab = StatusTab()
         self.serva_tab = ServaTab(self.ros_node, self.gamepads)
