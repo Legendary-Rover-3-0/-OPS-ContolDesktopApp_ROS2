@@ -15,6 +15,9 @@ from mani_tab import ManipulatorTab
 from gvision_tab import CamerasTab
 from ros_node import ROSNode
 from keyboard_tab import KeyboardTab
+from giz2_tab import Giz2Tab
+from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton, QGroupBox, QLineEdit
+
 import rclpy
 import config
 
@@ -99,6 +102,7 @@ class MainWindow(QMainWindow):
         self.mani_tab = ManipulatorTab(self.ros_node, self.gamepads)
         self.gvision_tab = CamerasTab()
         self.kayboard_tab = KeyboardTab(self.ros_node)
+        self.giz2_tab = Giz2Tab(self.ros_node)
 
         self.tabs.addTab(self.control_tab, 'Sterowanie')
         self.tabs.addTab(self.mani_tab, 'Manipulator')
@@ -108,6 +112,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.gps_tab, 'GPS')
         self.tabs.addTab(self.serva_tab, 'Serva')
         self.tabs.addTab(self.kayboard_tab, 'Klawiatura')
+        self.tabs.addTab(self.giz2_tab, 'Giz2')
 
         self.setCentralWidget(self.tabs)
 
