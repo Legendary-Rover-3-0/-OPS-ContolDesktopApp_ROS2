@@ -3,8 +3,8 @@ GAMEPAD_TOPIC = 'gamepad_input'
 BUTTON_TOPIC = 'button_states'
 
 # Kolory przycisków
-BUTTON_ON_COLOR = "green"
-BUTTON_OFF_COLOR = "red"
+BUTTON_ON_COLOR = "#2ECC71"
+BUTTON_OFF_COLOR = "#FF5733"
 BUTTON_DEFAULT_COLOR = "dark gray"
 BUTTON_SELECTED_COLOR = "blue"
 
