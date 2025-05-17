@@ -15,7 +15,7 @@ from mani_tab import ManipulatorTab
 from gvision_tab import CamerasTab
 from ros_node import ROSNode
 from keyboard_tab import KeyboardTab
-from giz2_tab import Giz2Tab
+from giz2_tab import GIZ2Tab
 import rclpy
 import config
 
