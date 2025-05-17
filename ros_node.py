@@ -15,7 +15,9 @@ class ROSNode(Node):
         super().__init__('ros_node')
         self.gamepad_publisher = self.create_publisher(Joy, 'gamepad_input', 10)
         self.button_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/led_state_topic', 10)
-        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10)
+        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10) 
+
+        self.communication_mode = 'ROS2' #ROS2 lub SATEL
         
         # self.camera_subscriptions = []
         # self.update_image_callback = update_image_callback
@@ -74,8 +76,10 @@ class ROSNode(Node):
             twist_msg = Twist()
             twist_msg.linear.x = 0.0
             twist_msg.angular.z = 0.0
-            self.cmd_vel_publisher.publish(twist_msg)
-            self.send_serial_frame("DV", 128, 128)
+            if self.communication_mode == 'ROS2':
+                self.cmd_vel_publisher.publish(twist_msg)
+            elif self.communication_mode == 'SATEL':
+                self.send_serial_frame("DV", 128, 128)
             return
 
         if len(axes) < 6 or len(buttons) < 6:
@@ -95,15 +99,15 @@ class ROSNode(Node):
         twist_msg.angular.z = self.max_angular_speed * (left_trigger - right_trigger) / 2 * self.speed_factor
 
         # Zakoduj x i z do bajtów
-        x_byte = self.float_to_byte(twist_msg.linear.x / self.max_linear_speed)
-        z_byte = self.float_to_byte(twist_msg.angular.z / self.max_angular_speed)
+        x_byte = self.float_to_byte(twist_msg.linear.x)
+        z_byte = self.float_to_byte(twist_msg.angular.z)
 
-        # Wyślij ramkę po UART
-        print(f"x: {twist_msg.linear.x} | z: {twist_msg.angular.z}")
-        print(f"x: {x_byte} | z: {z_byte}")
-        self.send_serial_frame("DV", x_byte, z_byte)
+        # Wyślij ramkę
+        if self.communication_mode == 'ROS2':
+            self.cmd_vel_publisher.publish(twist_msg)
+        elif self.communication_mode == 'SATEL':
+            self.send_serial_frame("DV", x_byte, z_byte)
 
-        self.cmd_vel_publisher.publish(twist_msg)
 
     def publish_button_states(self, kill_switch, autonomy, manual):
         msg = Int8MultiArray()
@@ -115,9 +119,10 @@ class ROSNode(Node):
         self.speed_factor = factor  
 
     def float_to_byte(self, value):
-        """Mapowanie float z [-1, 1] na bajt [0, 255]."""
+        """Mapowanie float z [-1, 1] na bajt [0, 254]."""
         value = max(-1.0, min(1.0, value))  # clamp
-        return round((value + 1.0) / 2.0 * 255)
+        #return round((value + 1.0) / 2.0 * 255)
+        return int((value*127.0)+128)
 
     def send_serial_frame(self, mark, *bytes):
         try:
@@ -129,7 +134,7 @@ class ROSNode(Node):
 
             frame = bytearray()
             frame.extend(b"$")
-            frame.extend(b"DV")
+            frame.extend(mark.encode('utf-8'))
             for byte in bytes:
                 frame.append(byte)
             frame.append(checksum)

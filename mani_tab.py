@@ -270,11 +270,27 @@ class ManipulatorTab(QWidget):
         msg.angular.y = self.current_values[4] / 100.0
         msg.angular.z = self.current_values[5] / 100.0
 
-        self.publisher.publish(msg)
+        # Wyślij ramkę
+        if self.node.communication_mode == 'ROS2':
+            self.publisher.publish(msg)
+
+        elif self.node.communication_mode == 'SATEL':
+            self.node.send_serial_frame("MN",
+                                self.node.float_to_byte(msg.linear.x),
+                                self.node.float_to_byte(msg.linear.y),
+                                self.node.float_to_byte(msg.linear.z),
+                                self.node.float_to_byte(msg.angular.x),
+                                self.node.float_to_byte(msg.angular.y),
+                                self.node.float_to_byte(msg.angular.z)
+                                )
+
 
     def publish_empty_values(self):
-        msg = Twist()
-        self.publisher.publish(msg)
+        if self.node.communication_mode == 'ROS2':
+            msg = Twist()
+            self.publisher.publish(msg)
+        elif self.node.communication_mode == 'SATEL':
+            self.node.send_serial_frame("MN",0,0,0,0,0,0)
 
     def update_sensitivity(self, index, value):
         self.sensitivities[index] = float(value)  # Aktualizacja konkretnego stopnia

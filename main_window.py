@@ -112,8 +112,6 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(lambda: rclpy.spin_once(self.ros_node, timeout_sec=0.01))
         self.timer.start(30)
 
-        self.communication_mode="ROS2"
-
         self.kill_switch_state = 0
         self.autonomy_state = 0
         self.manual_drive_state = 0
@@ -122,15 +120,15 @@ class MainWindow(QMainWindow):
     def toggle_communication_callback(self):
         # Wylaczenie skryptu jazdy autonomicznej
 
-        if self.communication_mode == "ROS2":
-            self.communication_mode = "SATEL"
+        if self.ros_node.communication_mode == "ROS2":
+            self.ros_node.communication_mode = "SATEL"
             self.control_tab.style_button(self.control_tab.communication_button, config.BUTTON_SELECTED_COLOR)
 
-        elif self.communication_mode == "SATEL":
-            self.communication_mode = "ROS2"
+        elif self.ros_node.communication_mode == "SATEL":
+            self.ros_node.communication_mode = "ROS2"
             self.control_tab.style_button(self.control_tab.communication_button, config.BUTTON_DEFAULT_COLOR)
             
-        self.control_tab.communication_button.setText(f"Communication: {self.communication_mode}")
+        self.control_tab.communication_button.setText(f"Communication: {self.ros_node.communication_mode}")
         
 
 
