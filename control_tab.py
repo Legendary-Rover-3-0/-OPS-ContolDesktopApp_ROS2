@@ -2,9 +2,11 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QPushButton, QComboBox, QSlider)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
+import config
 
 class ControlTab(QWidget):
-    def __init__(self, gamepads, toggle_manual_callback, toggle_kill_switch_callback, 
+    def __init__(self, gamepads, toggle_communication_callback,
+                 toggle_manual_callback, toggle_kill_switch_callback, 
                  toggle_autonomy_callback, update_speed_factor_callback):
         super().__init__()
         self.gamepads = gamepads
@@ -12,6 +14,7 @@ class ControlTab(QWidget):
         self.toggle_autonomy_callback = toggle_autonomy_callback
         self.toggle_manual_callback = toggle_manual_callback
         self.update_speed_factor_callback = update_speed_factor_callback
+        self.toggle_communication_callback = toggle_communication_callback
         
         self.init_ui()
 
@@ -76,6 +79,11 @@ class ControlTab(QWidget):
         # Sekcja przycisków sterowania
         control_buttons = QVBoxLayout()
         control_buttons.addWidget(QLabel('Sterowanie:'))
+
+        self.communication_button = QPushButton('Communication: ROS2')
+        self.communication_button.clicked.connect(self.toggle_communication_callback)
+        self.style_button(self.communication_button, config.BUTTON_DEFAULT_COLOR)
+        control_buttons.addWidget(self.communication_button)
 
         self.manual_drive_button = QPushButton('Manual Drive: OFF')
         self.manual_drive_button.clicked.connect(self.toggle_manual_callback)

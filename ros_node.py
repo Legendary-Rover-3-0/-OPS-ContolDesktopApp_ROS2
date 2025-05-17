@@ -6,6 +6,8 @@ from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+import serial
+
 
 class ROSNode(Node):
     def __init__(self):
@@ -24,6 +26,18 @@ class ROSNode(Node):
         # Skalowanie prędkości
         self.max_linear_speed = 1.0  # Maksymalna prędkość liniowa (m/s)
         self.max_angular_speed = 1.0  # Maksymalna prędkość kątowa (rad/s)
+
+        # Konfiguracja portu szeregowego dla SATEL'a
+        try:
+            self.serial_port = serial.Serial(
+                port='/dev/ttyUSB0',   # 👈 zmień na odpowiedni port (np. COM3 na Windowsie)
+                baudrate=9600,
+                timeout=1
+            )
+            self.get_logger().info("Port szeregowy otwarty.")
+        except serial.SerialException as e:
+            self.get_logger().error(f"Nie udało się otworzyć portu szeregowego: {e}")
+            self.serial_port = None
 
         # # Subskrypcja /cmd_vel
         # self.cmd_vel_subscription = self.create_subscription(
@@ -61,6 +75,7 @@ class ROSNode(Node):
             twist_msg.linear.x = 0.0
             twist_msg.angular.z = 0.0
             self.cmd_vel_publisher.publish(twist_msg)
+            self.send_serial_frame("DV", 128, 128)
             return
 
         if len(axes) < 6 or len(buttons) < 6:
@@ -79,6 +94,15 @@ class ROSNode(Node):
         twist_msg.linear.x = self.max_linear_speed * (left_trigger + right_trigger) / 2 * self.speed_factor
         twist_msg.angular.z = self.max_angular_speed * (left_trigger - right_trigger) / 2 * self.speed_factor
 
+        # Zakoduj x i z do bajtów
+        x_byte = self.float_to_byte(twist_msg.linear.x / self.max_linear_speed)
+        z_byte = self.float_to_byte(twist_msg.angular.z / self.max_angular_speed)
+
+        # Wyślij ramkę po UART
+        print(f"x: {twist_msg.linear.x} | z: {twist_msg.angular.z}")
+        print(f"x: {x_byte} | z: {z_byte}")
+        self.send_serial_frame("DV", x_byte, z_byte)
+
         self.cmd_vel_publisher.publish(twist_msg)
 
     def publish_button_states(self, kill_switch, autonomy, manual):
@@ -90,6 +114,35 @@ class ROSNode(Node):
     def update_speed_factor(self, factor):
         self.speed_factor = factor  
 
+    def float_to_byte(self, value):
+        """Mapowanie float z [-1, 1] na bajt [0, 255]."""
+        value = max(-1.0, min(1.0, value))  # clamp
+        return round((value + 1.0) / 2.0 * 255)
+
+    def send_serial_frame(self, mark, *bytes):
+        try:
+            # Prosty checksum: suma x + z modulo 256
+            sum = checksum = 0
+            for byte in bytes:
+                sum += byte
+            checksum = sum % 256
+
+            frame = bytearray()
+            frame.extend(b"$")
+            frame.extend(b"DV")
+            for byte in bytes:
+                frame.append(byte)
+            frame.append(checksum)
+            frame.extend(b"#")
+            print(frame)
+
+            bit_string = ' '.join(f'{byte:08b}' for byte in frame)
+            print(bit_string)
+
+            self.serial_port.write(frame)
+
+        except Exception as e:
+            print(f"Błąd przy wysyłaniu ramki szeregowej: {e}")
     # def add_camera_subscription(self, topic, qos_profile):
     #     subscription = self.create_subscription(
     #         CompressedImage,  # Zmiana z Image na CompressedImage

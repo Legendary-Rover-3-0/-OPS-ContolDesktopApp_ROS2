@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
         font.setPointSize(12)
         self.tabs.setFont(font)
 
-        self.control_tab = ControlTab(self.gamepads, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
+        self.control_tab = ControlTab(self.gamepads, self.toggle_communication_callback, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
         self.ros_node = ROSNode()
         self.science_tab = ScienceTab(self.ros_node)
         self.status_tab = StatusTab()
@@ -112,10 +112,26 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(lambda: rclpy.spin_once(self.ros_node, timeout_sec=0.01))
         self.timer.start(30)
 
+        self.communication_mode="ROS2"
+
         self.kill_switch_state = 0
         self.autonomy_state = 0
         self.manual_drive_state = 0
         self.camera_windows = [None] * 4
+
+    def toggle_communication_callback(self):
+        # Wylaczenie skryptu jazdy autonomicznej
+
+        if self.communication_mode == "ROS2":
+            self.communication_mode = "SATEL"
+            self.control_tab.style_button(self.control_tab.communication_button, config.BUTTON_SELECTED_COLOR)
+
+        elif self.communication_mode == "SATEL":
+            self.communication_mode = "ROS2"
+            self.control_tab.style_button(self.control_tab.communication_button, config.BUTTON_DEFAULT_COLOR)
+            
+        self.control_tab.communication_button.setText(f"Communication: {self.communication_mode}")
+        
 
 
     def toggle_kill_switch(self):
