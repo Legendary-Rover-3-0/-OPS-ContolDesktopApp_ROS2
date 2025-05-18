@@ -1,9 +1,10 @@
 import os
 import datetime
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
+                            QPushButton, QTabWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 
 class PlotApp(QWidget):
@@ -11,89 +12,133 @@ class PlotApp(QWidget):
         super().__init__()
         self.data_directory = "sensor_data"  # Katalog z danymi
         self.init_ui()
+        self.setWindowTitle("Science Data Visualizer")
+        self.setGeometry(100, 100, 1200, 800)
 
     def init_ui(self):
-        self.setWindowTitle("Sensor Data Plotter")
-        self.setGeometry(100, 100, 800, 600)
-
         main_layout = QVBoxLayout()
 
-        # Przyciski do wyboru typu wykresu
-        self.plot_buttons = QHBoxLayout()
-        self.temperature_plot_button = QPushButton('Temperature Plot')
-        self.mass_plot_button = QPushButton('Mass Plot')
-        self.soil_moisture_plot_button = QPushButton('Soil Moisture Plot')
-
-        self.temperature_plot_button.clicked.connect(lambda: self.plot_data('temperature'))
-        self.mass_plot_button.clicked.connect(lambda: self.plot_data('mass'))
-        self.soil_moisture_plot_button.clicked.connect(lambda: self.plot_data('soil_moisture'))
-
-        self.plot_buttons.addWidget(self.temperature_plot_button)
-        self.plot_buttons.addWidget(self.mass_plot_button)
-        self.plot_buttons.addWidget(self.soil_moisture_plot_button)
-
-        # Canvas do wyświetlania wykresów
-        self.plot_figure = Figure()
-        self.plot_canvas = FigureCanvas(self.plot_figure)
+        # Zakładki dla różnych typów wykresów
+        self.tabs = QTabWidget()
         
-        main_layout.addLayout(self.plot_buttons)
-        main_layout.addWidget(self.plot_canvas)
-
+        # Dodaj zakładki
+        self.co2_tab = QWidget()
+        self.methane_tab = QWidget()
+        self.temp_tab = QWidget()
+        self.humidity_tab = QWidget()
+        self.radiation_tab = QWidget()
+        
+        self.tabs.addTab(self.create_plot_tab(self.co2_tab, "CO₂"), "CO₂ [ppm]")
+        self.tabs.addTab(self.create_plot_tab(self.methane_tab, "Metan"), "Metan [ppm]")
+        self.tabs.addTab(self.create_plot_tab(self.temp_tab, "Temperatura"), "Temp. [°C]")
+        self.tabs.addTab(self.create_plot_tab(self.humidity_tab, "Wilgotność"), "Wilgotność [%]")
+        self.tabs.addTab(self.create_plot_tab(self.radiation_tab, "Promieniowanie"), "Promien. [CPM]")
+        
+        # Przycisk odświeżania
+        refresh_button = QPushButton('Odśwież wszystkie wykresy')
+        refresh_button.clicked.connect(self.refresh_all_plots)
+        
+        main_layout.addWidget(self.tabs)
+        main_layout.addWidget(refresh_button)
         self.setLayout(main_layout)
+        
+        # Pierwsze ładowanie danych
+        self.refresh_all_plots()
 
-    def load_sensor_data(self, file_pattern):
-        data = []
-        for i in range(1, 5):  # Dla 4 sensorów
-            file_path = os.path.join(self.data_directory, file_pattern.format(i))
-            sensor_data = []
-            try:
-                with open(file_path, "r") as f:
-                    lines = f.readlines()[-100:]  # Pobierz ostatnie 100 linii
-                    for line in lines:
-                        parts = line.strip().split(", ")
-                        if len(parts) != 2:
-                            continue
-                        value = float(parts[1])
-                        sensor_data.append(value)
-            except FileNotFoundError:
-                print(f"Plik {file_path} nie istnieje.")
-            except Exception as e:
-                print(f"Błąd wczytywania {file_path}: {e}")
-            
-            data.append(sensor_data)
-        
-        return data
+    def create_plot_tab(self, tab, title):
+        layout = QVBoxLayout(tab)
+        figure = Figure()
+        canvas = FigureCanvas(figure)
+        layout.addWidget(canvas)
+        tab.figure = figure
+        tab.canvas = canvas
+        tab.title = title
+        return tab
 
-    def plot_data(self, plot_type):
-        self.plot_figure.clear()
-        ax = self.plot_figure.add_subplot(111)
+    def load_data_from_file(self, filename):
+        timestamps = []
+        values = []
+        try:
+            with open(os.path.join(self.data_directory, filename), "r") as f:
+                for line in f:
+                    parts = line.strip().split(", ")
+                    if len(parts) >= 2:
+                        try:
+                            timestamp = datetime.datetime.strptime(parts[0], "%Y-%m-%d %H:%M:%S")
+                            # Dla plików z wieloma wartościami (CO2, metan)
+                            if len(parts) > 2:
+                                for i, val in enumerate(parts[1:]):
+                                    if len(values) <= i:
+                                        values.append([])
+                                        timestamps.append([])
+                                    timestamps[i].append(timestamp)
+                                    values[i].append(float(val))
+                            else:
+                                if not values:
+                                    values.append([])
+                                    timestamps.append([])
+                                timestamps[0].append(timestamp)
+                                values[0].append(float(parts[1]))
+                        except ValueError as e:
+                            print(f"Błąd parsowania linii: {line}. {e}")
+        except FileNotFoundError:
+            print(f"Plik {filename} nie istnieje.")
+        except Exception as e:
+            print(f"Błąd wczytywania {filename}: {e}")
         
-        file_patterns = {
-            'temperature': "temperature_sensor_{}.txt",
-            'mass': "mass_sensor_{}.txt",
-            'soil_moisture': "soil_moisture_sensor_{}.txt"
-        }
+        return timestamps, values
+
+    def plot_data(self, tab, filename, ylabel):
+        tab.figure.clear()
+        ax = tab.figure.add_subplot(111)
         
-        if plot_type in file_patterns:
-            data_history = self.load_sensor_data(file_patterns[plot_type])
-            ylabel_dict = {
-                'temperature': "Temperature (°C)",
-                'mass': "Mass (g)",
-                'soil_moisture': "Soil Moisture"
-            }
-            ylabel = ylabel_dict[plot_type]
-        else:
+        timestamps, values = self.load_data_from_file(filename)
+        
+        if not timestamps:
+            ax.text(0.5, 0.5, 'Brak danych', ha='center', va='center')
+            tab.canvas.draw()
             return
         
-        colors = ['r', 'g', 'b', 'm']  # Kolory dla każdego sensora
-        for i in range(4):
-            ax.plot(range(len(data_history[i])), data_history[i], color=colors[i], label=f'Sensor {i+1}')
+        colors = ['b', 'g', 'r', 'c', 'm', 'y']
+        labels = ['Czujnik 1', 'Czujnik 2']  # Domyślne etykiety
+        
+        for i in range(len(timestamps)):
+            if i < len(labels):
+                label = labels[i]
+            else:
+                label = f'Dane {i+1}'
+                
+            ax.plot(timestamps[i], values[i], 
+                   color=colors[i % len(colors)], 
+                   label=label, 
+                   marker='o', 
+                   markersize=3, 
+                   linestyle='-', 
+                   linewidth=1)
+        
+        # Formatowanie osi czasu
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M\n%d-%m'))
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
         
         ax.set_ylabel(ylabel)
-        ax.set_xlabel("Time Steps")
+        ax.set_title(tab.title)
         ax.legend(loc='upper right')
-        ax.grid(True)
-        self.plot_canvas.draw()
+        ax.grid(True, linestyle='--', alpha=0.7)
+        tab.figure.autofmt_xdate()
+        tab.canvas.draw()
+
+    def refresh_all_plots(self):
+        # Mapowanie zakładek na odpowiednie pliki i etykiety
+        plot_config = [
+            (self.co2_tab, "co2.txt", "CO₂ [ppm]"),
+            (self.methane_tab, "methane.txt", "Metan [ppm]"),
+            (self.temp_tab, "soil_temp.txt", "Temperatura [°C]"),
+            (self.humidity_tab, "soil_humidity.txt", "Wilgotność [%]"),
+            (self.radiation_tab, "radiation.txt", "Promieniowanie [CPM]")
+        ]
+        
+        for tab, filename, ylabel in plot_config:
+            self.plot_data(tab, filename, ylabel)
 
 
 if __name__ == "__main__":
