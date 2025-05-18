@@ -18,6 +18,7 @@ from keyboard_tab import KeyboardTab
 from giz2_tab import GIZ2Tab
 import rclpy
 import config
+import serial
 
 class MainWindow(QMainWindow):
     def closeEvent(self, event):
@@ -85,7 +86,7 @@ class MainWindow(QMainWindow):
         font.setPointSize(12)
         self.tabs.setFont(font)
 
-        self.control_tab = ControlTab(self.gamepads, self.toggle_communication_callback, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
+        self.control_tab = ControlTab(self.gamepads, self.connect_satel, self.toggle_communication_callback, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
         self.ros_node = ROSNode()
         self.science_tab = ScienceTab(self.ros_node)
         self.status_tab = StatusTab()
@@ -108,17 +109,48 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
 
         # Uruchomienie timera do aktualizacji obrazów
-        self.timer = QTimer()
-        self.timer.timeout.connect(lambda: rclpy.spin_once(self.ros_node, timeout_sec=0.01))
-        self.timer.start(30)
+        # self.timer = QTimer()
+        # self.timer.timeout.connect(lambda: rclpy.spin_once(self.ros_node, timeout_sec=0.01))
+        # self.timer.start(30)
 
         self.kill_switch_state = 0
         self.autonomy_state = 0
         self.manual_drive_state = 0
         self.camera_windows = [None] * 4
 
+    def connect_satel(self):
+        """Ustaw nowy port szeregowy"""
+        selected_port = self.control_tab.serial_port_selector.currentText()
+        try:
+            selected_baudrate = int(self.control_tab.baudrate_input.currentText())
+        except ValueError:
+            selected_baudrate = 9600
+            self.control_tab.baudrate_input.setCurrentText("9600")
+
+        try:
+            self.ros_node.serial_port = serial.Serial(
+                port=selected_port,
+                baudrate=selected_baudrate,
+                timeout=1
+            )
+            print(f"Połączono z {selected_port} @ {selected_baudrate} baud.")
+        except serial.SerialException as e:
+            print(f"Nie udało się otworzyć portu {selected_port}: {e}")
+            self.ros_node.serial_port = None
+
+        if self.ros_node.serial_port is not None:
+            self.control_tab.style_button(self.control_tab.connect_serial_button, config.BUTTON_ON_COLOR)
+            self.control_tab.connect_serial_button.setText("Successfully Connected!")
+        else:
+            self.control_tab.style_button(self.control_tab.connect_serial_button, config.BUTTON_OFF_COLOR)
+            self.control_tab.connect_serial_button.setText("Error: Not Connected!")
+        
+
     def toggle_communication_callback(self):
         # Wylaczenie skryptu jazdy autonomicznej
+
+        if self.ros_node.serial_port is None:
+            return
 
         if self.ros_node.communication_mode == "ROS2":
             self.ros_node.communication_mode = "SATEL"

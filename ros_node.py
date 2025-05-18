@@ -29,18 +29,6 @@ class ROSNode(Node):
         self.max_linear_speed = 1.0  # Maksymalna prędkość liniowa (m/s)
         self.max_angular_speed = 1.0  # Maksymalna prędkość kątowa (rad/s)
 
-        # Konfiguracja portu szeregowego dla SATEL'a
-        try:
-            self.serial_port = serial.Serial(
-                port='/dev/ttyUSB0',   # 👈 zmień na odpowiedni port (np. COM3 na Windowsie)
-                baudrate=9600,
-                timeout=1
-            )
-            self.get_logger().info("Port szeregowy otwarty.")
-        except serial.SerialException as e:
-            self.get_logger().error(f"Nie udało się otworzyć portu szeregowego: {e}")
-            self.serial_port = None
-
         # # Subskrypcja /cmd_vel
         # self.cmd_vel_subscription = self.create_subscription(
         #     Twist, '/cmd_vel', self.cmd_vel_listener, 10
