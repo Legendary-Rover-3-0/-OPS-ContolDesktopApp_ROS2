@@ -21,7 +21,7 @@ class ControlTab(QWidget):
         # Lewa kolumna: Model łazika
         left_column = QVBoxLayout()
         rover_label = QLabel()
-        rover_pixmap = QPixmap('rover_image.png')
+        rover_pixmap = QPixmap('newRover.png')
         rover_label.setPixmap(rover_pixmap.scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
         left_column.addWidget(rover_label)
         left_column.addWidget(QLabel('Model łazika'))
@@ -32,7 +32,7 @@ class ControlTab(QWidget):
         # Środkowa kolumna: Model manipulatora
         middle_column = QVBoxLayout()
         manipulator_label = QLabel()
-        manipulator_pixmap = QPixmap('manipulator_new.png')
+        manipulator_pixmap = QPixmap('newArm.png')
         manipulator_label.setPixmap(manipulator_pixmap.scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio))
         middle_column.addWidget(manipulator_label)
         middle_column.addWidget(QLabel('Model manipulatora'))
