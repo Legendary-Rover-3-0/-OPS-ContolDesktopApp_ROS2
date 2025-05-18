@@ -163,7 +163,7 @@ class GPSTab(Node):
             self.root.after(1000, self.check_database_for_changes)
 
         except Exception as e:
-            print(f"Błąd podczas sprawdzania zmian w bazie danych: {e}")
+            #print(f"Błąd podczas sprawdzania zmian w bazie danych: {e}")
             # Ponów próbę za 1 sekundę mimo błędu
             self.root.after(1000, self.check_database_for_changes)
 

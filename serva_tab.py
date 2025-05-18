@@ -389,9 +389,12 @@ class ServaTab(QWidget):
         self.publish_servo_positions()
     
     def publish_servo_positions(self):
-        msg = Int32MultiArray()
-        msg.data = self.servo_positions
-        self.servo_publisher.publish(msg)
+        if self.node.communication_mode == 'ROS2':
+            msg = Int32MultiArray()
+            msg.data = self.servo_positions
+            self.servo_publisher.publish(msg)
+        elif self.node.communication_mode == 'SATEL':
+            self.node.send_serial_frame("GS", *self.servo_positions)
     
     def read_gamepad(self):
         dead_zone = 0.8

@@ -98,10 +98,13 @@ class ROSNode(Node):
 
 
     def publish_button_states(self, kill_switch, autonomy, manual):
-        msg = Int8MultiArray()
-        #msg.data = f'KillSwitch:{kill_switch};Autonomy:{autonomy};Extra:{extra}'
-        msg.data = [manual, autonomy, kill_switch] #TODO: czy zmienic kolejnosc?
-        self.button_publisher.publish(msg)
+        if self.communication_mode == 'ROS2':
+            msg = Int8MultiArray()
+            msg.data = [manual, autonomy, kill_switch]
+            self.button_publisher.publish(msg)
+        elif self.communication_mode == 'SATEL':
+            byte = (manual << 0) | (autonomy << 1) | (kill_switch << 2)
+            self.send_serial_frame("GL", byte)
 
     def update_speed_factor(self, factor):
         self.speed_factor = factor  
