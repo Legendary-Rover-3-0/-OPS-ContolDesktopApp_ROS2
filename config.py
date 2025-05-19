@@ -5,7 +5,7 @@ BUTTON_TOPIC = 'button_states'
 # Kolory przycisków
 BUTTON_ON_COLOR = "#2ECC71"
 BUTTON_OFF_COLOR = "#FF5733"
-BUTTON_DEFAULT_COLOR = "dark gray"
+BUTTON_DEFAULT_COLOR = "#3a3a3a"
 BUTTON_SELECTED_COLOR = "blue"
 
 # Konfiguracja agentów

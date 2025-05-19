@@ -2,3 +2,4 @@
 /__pycache__
 *.pyc
 GPS/mapa.db
+GPS/gps_targets.db
