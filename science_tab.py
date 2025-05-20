@@ -24,7 +24,18 @@ class ScienceTab(QWidget):
         os.makedirs(self.data_directory, exist_ok=True)
 
         # Stany urządzeń
-        self.servo_states = [90] * 6  # Domyślnie 90 stopni
+# Stany urządzeń
+        self.basic = [10, 20, 30, 40, 50, 60]
+        self.servo_states = self.basic.copy()
+
+        self.servo_presets = {
+            0: [20, 60, 170],   # Presety dla serwa 0 (Serwo 1)
+            1: [40, 80, 162],   # Presety dla serwa 1 (Serwo 2)
+            2: [10, 45, 135],   # Presety dla serwa 2 (Serwo 3)
+            3: [30, 90, 150],   # Presety dla serwa 3 (Serwo 4)
+            4: [15, 75, 165],   # Presety dla serwa 4 (Serwo 5)
+            5: [25, 85, 175]    # Presety dla serwa 5 (Serwo 6)
+        }
         self.pump_states = [False] * 2
         self.led_brightness = 0
         self.drill_state = False
@@ -132,16 +143,23 @@ class ScienceTab(QWidget):
         self.servo_buttons = []  # Do przechowywania przycisków presetów
         self.servo_spinboxes = []
         
+        # Grupa sterowania serwami
+        servo_group = QGroupBox("Sterowanie Serwomechanizmami")
+        servo_layout = QGridLayout()
+
+        self.servo_buttons = []  # Przechowuje przyciski presetów
+        self.servo_spinboxes = []  # Przechowuje spinboxy
+
         for i in range(6):
             # Etykieta serwa
             servo_layout.addWidget(QLabel(f"Serwo {i+1}:"), i, 0)
             
-            # Przyciski presetów
+            # Przyciski presetów (teraz brane z konfiguracji)
             btn_frame = QFrame()
             btn_layout = QHBoxLayout(btn_frame)
             btn_layout.setContentsMargins(0, 0, 0, 0)
             
-            for angle in [0, 90, 180]:
+            for angle in self.servo_presets[i]:  # Używamy presetów dla danego serwa
                 btn = QPushButton(str(angle))
                 btn.setFixedWidth(60)
                 btn.clicked.connect(lambda _, idx=i, a=angle: self.set_servo_preset(idx, a))
@@ -153,7 +171,7 @@ class ScienceTab(QWidget):
             # SpinBox dla dowolnej wartości
             spinbox = QSpinBox()
             spinbox.setRange(0, 180)
-            spinbox.setValue(90)
+            spinbox.setValue(self.basic[i])
             spinbox.setFixedWidth(100)
             set_btn = QPushButton("Ustaw")
             set_btn.setFixedWidth(150)
@@ -163,7 +181,7 @@ class ScienceTab(QWidget):
             servo_layout.addWidget(set_btn, i, 3)
             
             self.servo_spinboxes.append(spinbox)
-        
+
         servo_group.setLayout(servo_layout)
         right_scroll_layout.addWidget(servo_group)
         
@@ -282,9 +300,9 @@ class ScienceTab(QWidget):
         self.node.create_subscription(Float32, 'Radiation_Publisher', self.radiation_callback, 10)
 
     def init_ros_publishers(self):
-        self.servo_publisher = self.node.create_publisher(Int32MultiArray, '/servos_urc_publisher', 10)
-        self.pump_publisher = self.node.create_publisher(Int8MultiArray, '/pumps_urc_publisher', 10)
-        self.led_publisher = self.node.create_publisher(Int16, '/led_urc_publisher', 10)
+        self.servo_publisher = self.node.create_publisher(Int32MultiArray, '/servos_urc_control', 10)
+        self.pump_publisher = self.node.create_publisher(Int8MultiArray, '/pumps_urc_control', 10)
+        self.led_publisher = self.node.create_publisher(Int16, '/led_urc_control', 10)
         self.koszelnik_publisher = self.node.create_publisher(Int8MultiArray, '/ESP32_GIZ/output_state_topic', 10)
 
     def co2_callback(self, msg):
