@@ -290,7 +290,7 @@ class ManipulatorTab(QWidget):
             msg = Twist()
             self.publisher.publish(msg)
         elif self.node.communication_mode == 'SATEL':
-            self.node.send_serial_frame("MN",0,0,0,0,0,0)
+            self.node.send_serial_frame("MN",128, 128, 128, 128, 128, 128) #TODO: be! naprawić
 
     def update_sensitivity(self, index, value):
         self.sensitivities[index] = float(value)  # Aktualizacja konkretnego stopnia
