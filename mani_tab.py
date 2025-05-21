@@ -189,12 +189,12 @@ class ManipulatorTab(QWidget):
             button_mapping = {
                 0: (2, -1),  # Stopień 1 dół
                 1: (2, 1),
-                2: (4, -1),  # Stopień 5 chwytak obrot
-                3: (4, 1),
-                6: (1, -1),  # Stopień 6 chwytak zacisk
-                7: (1, 1),
-                9: (0, -1),  # Stopień 4 nadgarstek
-                10: (0, 1),
+                2: (4, 1),  # Stopień 5 chwytak obrot
+                3: (4, -1),
+                6: (1, 1),  # Stopień 6 chwytak zacisk
+                7: (1, -1),
+                9: (0, 1),  # Stopień 4 nadgarstek
+                10: (0, -1),
             }
 
             # Mapa HAT (krzyżaka) do stopni swobody
