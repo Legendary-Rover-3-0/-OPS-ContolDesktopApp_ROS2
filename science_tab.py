@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushBut
                             QSlider, QScrollArea, QSizePolicy)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette, QFont
+from PyQt6.QtCore import QProcess
 from rclpy.node import Node
 from std_msgs.msg import Int32, Float32MultiArray, Int8MultiArray, Int32MultiArray, Float32, Int16
 import os
@@ -119,6 +120,14 @@ class ScienceTab(QWidget):
         self.plot_app_button.setFixedHeight(40)
         self.plot_app_button.clicked.connect(self.launch_plot_app)
         left_scroll_layout.addWidget(self.plot_app_button)
+
+
+        # Przycisk do otwierania aplikacji z mapą radiacji
+        self.radiation_app_button = QPushButton('Otwórz aplikację z mapą radiacji')
+        self.radiation_app_button.setFont(QFont('Arial', 12))
+        self.radiation_app_button.setFixedHeight(40)
+        self.radiation_app_button.clicked.connect(self.launch_radiation_app)
+        left_scroll_layout.addWidget(self.radiation_app_button)
         
         left_scroll_layout.addStretch()
         left_scroll.setWidget(left_scroll_content)
@@ -431,6 +440,15 @@ class ScienceTab(QWidget):
             subprocess.Popen(["python3", "wykresy.py"])
         except Exception as e:
             self.node.get_logger().error(f"Nie udało się uruchomić aplikacji z wykresami: {str(e)}")
+    
+    def launch_radiation_app(self):
+        try:
+            # Launch the Tkinter-based radiation map window
+            radiation_map_path = os.path.join(os.path.dirname(__file__), 'GPS/radiation_map.py')
+            QProcess.startDetached('python3', [radiation_map_path])
+        except Exception as e:
+            self.node.get_logger().error(f"Nie udało się uruchomić aplikacji z radiacją: {str(e)}")
+
 
     def update_button_style(self, button, color):
         button.setStyleSheet(f"background-color: {color};")

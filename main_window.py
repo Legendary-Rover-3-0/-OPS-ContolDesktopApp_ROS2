@@ -16,7 +16,7 @@ from gvision_tab import CamerasTab
 from ros_node import ROSNode
 from keyboard_tab import KeyboardTab
 from giz2_tab import GIZ2Tab
-from radiation_map_tab import RadiationMapTab
+#from radiation_map_tab import RadiationMapTab
 import rclpy
 import config
 import serial
@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
         self.gvision_tab = CamerasTab()
         self.kayboard_tab = KeyboardTab(self.ros_node)
         self.giz2_tab = None  # Placeholder for future use
-        self.radiation_map_tab = RadiationMapTab()
+        #self.radiation_map_tab = RadiationMapTab()
 
 
         self.tabs.addTab(self.control_tab, 'Sterowanie')
@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.gps_tab, 'GPS')
         self.tabs.addTab(self.serva_tab, 'Serva')
         self.tabs.addTab(self.kayboard_tab, 'Klawiatura')
-        self.tabs.addTab(self.radiation_map_tab, 'Radiation Map')
+        #self.tabs.addTab(self.radiation_map_tab, 'Radiation Map')
 
 
         self.setCentralWidget(self.tabs)

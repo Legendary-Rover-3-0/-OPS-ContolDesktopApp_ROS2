@@ -5,3 +5,4 @@ pygame
 PyQt6-WebEngine
 pyserial
 tkintermapview
+geopy
