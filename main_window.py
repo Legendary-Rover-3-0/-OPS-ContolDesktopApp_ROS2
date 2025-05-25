@@ -125,6 +125,19 @@ class MainWindow(QMainWindow):
 
     def connect_satel(self):
         """Ustaw nowy port szeregowy"""
+
+        if self.ros_node.serial_port is not None:
+            # disconnect
+            self.ros_node.serial_port = None
+            self.control_tab.style_button(self.control_tab.connect_serial_button, config.BUTTON_DEFAULT_COLOR)
+            self.control_tab.connect_serial_button.setText("Connect")
+            if self.ros_node.communication_mode == 'SATEL':
+                self.toggle_communication_callback()
+
+            print(f"Rozczono port.")
+            return
+
+
         selected_port = self.control_tab.serial_port_selector.currentText()
         try:
             selected_baudrate = int(self.control_tab.baudrate_input.currentText())
@@ -154,10 +167,7 @@ class MainWindow(QMainWindow):
     def toggle_communication_callback(self):
         # Wylaczenie skryptu jazdy autonomicznej
 
-        if self.ros_node.serial_port is None:
-            return
-
-        if self.ros_node.communication_mode == "ROS2":
+        if self.ros_node.communication_mode == "ROS2" and self.ros_node.serial_port is not None:
             self.ros_node.communication_mode = "SATEL"
             self.control_tab.style_button(self.control_tab.communication_button, config.BUTTON_SELECTED_COLOR)
 

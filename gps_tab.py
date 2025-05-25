@@ -5,6 +5,7 @@ from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtCore import Qt, QProcess, QTimer, QThread, pyqtSignal
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Float64MultiArray
 import os
 import sqlite3
 from datetime import datetime
@@ -51,8 +52,10 @@ class GPSTab(QWidget):
         self.longitude = 0.0
         self.init_db()
         self.init_ui()
-        self.init_ros_subscription()
         self.setup_database_watcher()
+
+        self.node.create_subscription(NavSatFix, '/gps/fix', self.gps_callback, 10)
+        self.target_publisher = self.node.create_publisher(Float64MultiArray, '/gps/targets', 10)
 
     def init_db(self):
         """Inicjalizacja bazy danych SQLite"""
@@ -126,6 +129,8 @@ class GPSTab(QWidget):
         # Przycisk do dodawania ręcznie wprowadzonych współrzędnych
         add_manual_btn = QPushButton("Add Target Coordinates")
         add_manual_btn.clicked.connect(self.add_manual_coordinates)
+        add_manual_btn.setFont(font)
+        add_manual_btn.setFixedHeight(50)
         
         add_target_layout.addWidget(QLabel("Latitude:"))
         add_target_layout.addWidget(self.lat_input)
@@ -147,6 +152,13 @@ class GPSTab(QWidget):
         
         right_layout.addWidget(add_target_group)
         right_layout.addWidget(targets_group)
+
+        self.send_targets_button = QPushButton("Send target list")
+        self.send_targets_button.clicked.connect(self.send_targets)
+        self.send_targets_button.setFont(font)
+        self.send_targets_button.setFixedHeight(50)
+
+        right_layout.addWidget(self.send_targets_button)
         
         # Łączenie głównych layoutów
         main_layout.addLayout(left_layout)
@@ -155,9 +167,7 @@ class GPSTab(QWidget):
         
         # Wczytanie istniejących celów z bazy danych
         self.load_targets_from_db()
-
-    def init_ros_subscription(self):
-        self.node.create_subscription(NavSatFix, '/gps/fix', self.gps_callback, 10)
+        
 
     def gps_callback(self, msg: NavSatFix):
         """Obsługa nowych danych GPS"""
@@ -207,7 +217,7 @@ class GPSTab(QWidget):
             layout = QHBoxLayout()
             
             # Etykieta z informacjami o celu
-            label = QLabel(f"Lat: {target[1]:.6f}, Lon: {target[2]:.6f}\n{target[3]}")
+            label = QLabel(f"Lat: {target[1]}, Lon: {target[2]}\n{target[3]}")
             
             # Przycisk do usuwania
             delete_btn = QPushButton()
@@ -239,6 +249,23 @@ class GPSTab(QWidget):
         lat, lon = self.cursor.fetchone()
         self.lat_input.setText(str(lat))
         self.lon_input.setText(str(lon))
+
+    def send_targets(self):
+        """Wysyła listę targetów jako Float32MultiArray w formacie [lat1, lon1, lat2, lon2, ...]"""
+        self.cursor.execute("SELECT latitude, longitude FROM targets")
+        rows = self.cursor.fetchall()
+
+        data = []
+        for lat, lon in rows:
+            data.append(float(lat))
+            data.append(float(lon))
+
+        msg = Float64MultiArray()
+        msg.data = data
+
+        self.target_publisher.publish(msg)
+        #self.node.get_logger().info(f"Wysłano {len(rows)} targetów do /gps/targets jako Float32MultiArray")
+
 
     def closeEvent(self, event):
         """Zamykanie zasobów przy zamykaniu aplikacji"""

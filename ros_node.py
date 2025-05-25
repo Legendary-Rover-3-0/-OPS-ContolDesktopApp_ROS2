@@ -18,6 +18,7 @@ class ROSNode(Node):
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10) 
 
         self.communication_mode = 'ROS2' #ROS2 lub SATEL
+        self.serial_port = None
         
         # self.camera_subscriptions = []
         # self.update_image_callback = update_image_callback

@@ -15,6 +15,11 @@ UNPLUG_PLUG_SCRIPT = "/home/legendary/kubatk/unplug.sh" #skrypt musi pobierać 1
 AUTONOMY_BASE_SCRIPT = "/home/legendary/kubatk/autonomy.sh"
 #AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/autonomydrive.sh"
 AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/test.sh"
+START_GPS_SCRIPT = "" # potrzebny parametr (port GPS) # TODO wrzuci ale gotowy
+START_TARGETS_TO_YAML = "" # TODO
+START_SATEL_DECODER = "home/legendary/kubatk/satel/decoder.py" # potrzebny parametr port # TODO
+START_SCIENCE_BACKUP = "" # TODO wrzuci ale gotowy
+PORT_DETAILS_PY_SCRIPT = "/home/legendary/kubatk/satel/list.py"
 
 # Manipulator
 MANI_DEFAULT_VALUE = 100.0

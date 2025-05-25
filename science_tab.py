@@ -419,7 +419,11 @@ class ScienceTab(QWidget):
         
         # Aktualizacja przycisków
         self.update_button_states()
-        self.koszelnik_publisher.publish(msg)
+        if self.node.communication_mode == 'ROS2':
+            self.koszelnik_publisher.publish(msg)
+        elif self.node.communication_mode == 'SATEL':
+            byte = (msg.data[0] << 0) | (msg.data[1] << 1) | (msg.data[2] << 2)
+            self.node.send_serial_frame("GK", byte)
 
     def update_button_states(self):
         """Aktualizuje style wszystkich przycisków zgodnie z aktualnymi stanami"""

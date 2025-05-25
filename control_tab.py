@@ -201,7 +201,8 @@ class ControlTab(QWidget):
         self.serial_port_selector.clear()
         ports = serial.tools.list_ports.comports()
         for port in ports:
-            self.serial_port_selector.addItem(port.device)
+            if port.device.startswith("/dev/ttyUSB"):
+                self.serial_port_selector.addItem(port.device)
         if not ports:
             self.serial_port_selector.addItem("Brak portów")
 
