@@ -313,7 +313,7 @@ class StatusTab(QWidget):
 
     def show_ports_details_callback(self):
         self.run_ansible(
-            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'python {config.PORT_DETAILS_PY_SCRIPT} | tee /tmp/list_log.txt && tail -n 200 /tmp/list_log.txt'",
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '{config.PORT_DETAILS_PY_SCRIPT}'",
             output=self.show_logs
         )
     
