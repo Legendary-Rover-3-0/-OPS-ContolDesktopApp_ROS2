@@ -387,6 +387,17 @@ class ServaTab(QWidget):
         
         self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
         self.publish_servo_positions()
+
+    def set_servo_position(self, index, value):
+        new_position = value
+        if new_position < 0:
+            new_position = 0
+        elif new_position > 180:
+            new_position = 180
+        self.servo_positions[index] = new_position
+        
+        self.servo_labels[index].setText(f"Position: {self.servo_positions[index]}°")
+        self.publish_servo_positions()
     
     def publish_servo_positions(self):
         if self.node.communication_mode == 'ROS2':
@@ -478,10 +489,10 @@ class ServaTab(QWidget):
             self.adjust_servo_position(0, -self.step_values[0])  # 360° Camera - left
         elif event.key() == Qt.Key.Key_D:
             self.adjust_servo_position(0, self.step_values[0])  # 360° Camera - right
-        elif event.key() == Qt.Key.Key_K:
-            self.adjust_servo_position(2, self.step_values[2])  # Science Camera - up
-        elif event.key() == Qt.Key.Key_L:
-            self.adjust_servo_position(2, -self.step_values[2])  # Science Camera - down
+        # elif event.key() == Qt.Key.Key_K:
+        #     self.adjust_servo_position(2, self.step_values[2])  # Science Camera - up
+        # elif event.key() == Qt.Key.Key_L:
+        #     self.adjust_servo_position(2, -self.step_values[2])  # Science Camera - down
         elif event.key() == Qt.Key.Key_U:
             self.adjust_servo_position(3, self.step_values[3])  # Forever Alone Module - up
         elif event.key() == Qt.Key.Key_J:

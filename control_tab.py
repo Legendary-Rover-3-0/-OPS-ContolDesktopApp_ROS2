@@ -5,6 +5,15 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtGui import QFont
 import config
 import serial.tools.list_ports
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
+
+class PortScannerWorker(QObject):
+    ports_found = pyqtSignal(list)
+
+    def run(self):
+        ports = serial.tools.list_ports.comports()
+        usb_ports = [port.device for port in ports if port.device.startswith("/dev/ttyUSB")]
+        self.ports_found.emit(usb_ports)
 
 class ControlTab(QWidget):
     def __init__(self, gamepads, connect_satel, toggle_communication_callback,
@@ -197,14 +206,28 @@ class ControlTab(QWidget):
         self.update_speed_factor_callback(speed_factor)
 
     def refresh_serial_ports(self):
-        """Wypełnij listę dostępnych portów szeregowych"""
         self.serial_port_selector.clear()
-        ports = serial.tools.list_ports.comports()
-        for port in ports:
-            if port.device.startswith("/dev/ttyUSB"):
-                self.serial_port_selector.addItem(port.device)
-        if not ports:
+        self.serial_port_selector.addItem("Skanowanie...")
+
+        self.port_thread = QThread()
+        self.port_worker = PortScannerWorker()
+        self.port_worker.moveToThread(self.port_thread)
+
+        self.port_thread.started.connect(self.port_worker.run)
+        self.port_worker.ports_found.connect(self.update_serial_ports)
+        self.port_worker.ports_found.connect(self.port_thread.quit)
+        self.port_worker.ports_found.connect(self.port_worker.deleteLater)
+        self.port_thread.finished.connect(self.port_thread.deleteLater)
+
+        self.port_thread.start()
+
+    def update_serial_ports(self, port_list):
+        self.serial_port_selector.clear()
+        if port_list:
+            self.serial_port_selector.addItems(port_list)
+        else:
             self.serial_port_selector.addItem("Brak portów")
+
 
     def update_button_state(self, button, text, state):
         color = '#2ECC71' if state else '#FF5733'  # Zielony/Czerwony

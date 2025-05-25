@@ -89,9 +89,9 @@ class MainWindow(QMainWindow):
 
         self.control_tab = ControlTab(self.gamepads, self.connect_satel, self.toggle_communication_callback, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
         self.ros_node = ROSNode()
-        self.science_tab = ScienceTab(self.ros_node)
-        self.status_tab = StatusTab()
         self.serva_tab = ServaTab(self.ros_node, self.gamepads)
+        self.science_tab = ScienceTab(self.ros_node, self.serva_tab)
+        self.status_tab = StatusTab()
         self.gps_tab = GPSTab(self.ros_node)
         self.mani_tab = ManipulatorTab(self.ros_node, self.gamepads)
         self.gvision_tab = CamerasTab()

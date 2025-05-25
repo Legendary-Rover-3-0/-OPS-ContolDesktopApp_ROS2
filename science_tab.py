@@ -13,16 +13,17 @@ import subprocess
 
 
 class ScienceTab(QWidget):
-    def __init__(self, node: Node):
+    def __init__(self, node: Node, serva):
         super().__init__()
         self.node = node
-        
+        self.serva = serva
         self.init_ros_subscriptions()
         self.init_ros_publishers()
 
         # Inicjalizacja danycha
         self.data_directory = "sensor_data"
         os.makedirs(self.data_directory, exist_ok=True)
+
 
         # Stany urządzeń
 # Stany urządzeń
@@ -39,7 +40,12 @@ class ScienceTab(QWidget):
         }
         self.pump_states = [False] * 2
         self.led_brightness = 0
+
         self.drill_state = False
+        self.drill_direction = None  # None, 'left', or 'right'
+        self.drill_left_button = None
+        self.drill_right_button = None
+
         self.heater_state = False
         self.koszelnik_state = False
         self.pump_buttons = []  # Initialize the pump_buttons list
@@ -251,32 +257,46 @@ class ScienceTab(QWidget):
         control_group = QGroupBox("Zdalne sterowanie")
         control_layout = QGridLayout()
 
-        # Wiertło
-        control_layout.addWidget(QLabel("Wiertło:"), 0, 0)
+        # Wiertło - nagłówek
+        control_layout.addWidget(QLabel("Wiertło:"), 2, 0)
+
+        # Kierunek wiertła (lewo/prawo)
+        self.drill_left_button = QPushButton("◀")
+        self.drill_right_button = QPushButton("▶")
+        self.drill_left_button.clicked.connect(lambda: self.set_drill_direction("left"))
+        self.drill_right_button.clicked.connect(lambda: self.set_drill_direction("right"))
+        self.drill_left_button.setFixedSize(30, 25)  # szerokość, wysokość
+        self.drill_right_button.setFixedSize(30, 25)
+
+        control_layout.addWidget(self.drill_left_button, 2, 1)
+        control_layout.addWidget(self.drill_right_button, 2, 2)
+
+        # Przyciski ON/OFF wiertła
         self.drill_on_button = QPushButton("🔄 WŁĄCZ")
         self.drill_off_button = QPushButton("WYŁĄCZ")
         self.drill_on_button.clicked.connect(lambda: self.send_control_command(0, True))
         self.drill_off_button.clicked.connect(lambda: self.send_control_command(0, False))
-        control_layout.addWidget(self.drill_on_button, 0, 1)
-        control_layout.addWidget(self.drill_off_button, 0, 2)
+        control_layout.addWidget(self.drill_on_button, 2, 3)
+        control_layout.addWidget(self.drill_off_button, 2, 4)
 
-        # Koszelnik
-        control_layout.addWidget(QLabel("Zdalny Koszelnik:"), 1, 0)
+        # Koszelnik (PRZESUNIĘTE do wiersza 3)
+        control_layout.addWidget(QLabel("Zdalny Koszelnik:"), 3, 0)
         self.koszelnik_on_button = QPushButton("🍺 WŁĄCZ")
         self.koszelnik_off_button = QPushButton("WYŁĄCZ")
         self.koszelnik_on_button.clicked.connect(lambda: self.send_control_command(1, True))
         self.koszelnik_off_button.clicked.connect(lambda: self.send_control_command(1, False))
-        control_layout.addWidget(self.koszelnik_on_button, 1, 1)
-        control_layout.addWidget(self.koszelnik_off_button, 1, 2)
+        control_layout.addWidget(self.koszelnik_on_button, 3, 3)
+        control_layout.addWidget(self.koszelnik_off_button, 3, 4)
 
-        # Grzałka
-        control_layout.addWidget(QLabel("Grzałka:"), 2, 0)
+        # Grzałka (PRZESUNIĘTE do wiersza 4)
+        control_layout.addWidget(QLabel("Grzałka:"), 4, 0)
         self.heater_on_button = QPushButton("🔥 WŁĄCZ")
         self.heater_off_button = QPushButton("WYŁĄCZ")
         self.heater_on_button.clicked.connect(lambda: self.send_control_command(2, True))
         self.heater_off_button.clicked.connect(lambda: self.send_control_command(2, False))
-        control_layout.addWidget(self.heater_on_button, 2, 1)
-        control_layout.addWidget(self.heater_off_button, 2, 2)
+        control_layout.addWidget(self.heater_on_button, 4, 3)
+        control_layout.addWidget(self.heater_off_button, 4, 4)
+
 
         control_group.setLayout(control_layout)
         right_scroll_layout.addWidget(control_group)
@@ -439,6 +459,21 @@ class ScienceTab(QWidget):
         self.update_button_style(self.heater_on_button, config.BUTTON_ON_COLOR if self.heater_state else config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.heater_off_button, config.BUTTON_OFF_COLOR if not self.heater_state else config.BUTTON_DEFAULT_COLOR)
 
+    def set_drill_direction(self, direction):
+        if direction == "left":
+            self.drill_direction = "left"
+            self.serva.set_servo_position(2, 10)
+            self.drill_left_button.setStyleSheet("background-color: green;")
+            self.drill_right_button.setStyleSheet("")
+            self.drill_right_button.setChecked(False)
+        elif direction == "right":
+            self.drill_direction = "right"
+            self.serva.set_servo_position(2, 100)
+            self.drill_right_button.setStyleSheet("background-color: green;")
+            self.drill_left_button.setStyleSheet("")
+            self.drill_left_button.setChecked(False)
+
+
     def launch_plot_app(self):
         try:
             subprocess.Popen(["python3", "wykresy.py"])
@@ -482,7 +517,6 @@ class ScienceTab(QWidget):
                 border: 2px solid #555;
                 border-radius: 6px;
                 padding: 5px;
-                min-width: 60px;
             }
             QPushButton:hover {
                 background-color: #555;
