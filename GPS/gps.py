@@ -10,7 +10,9 @@ import sqlite3
 from datetime import datetime
 
 # Global variable for marker coordinates
-rover_coords = {'x': 50.01817, 'y': 21.98669}
+# rover_coords = {'x': 50.01817, 'y': 21.98669}
+rover_coords = {'x': 39.2012129, 'y': -111.665272} # Sterling
+# rover_coords = {'x': 38.406441, 'y': -110.7925524} #Mars Research
 targets = []  # Lista wszystkich targetów
 
 class GPSTab(Node):
@@ -35,9 +37,10 @@ class GPSTab(Node):
         self.map_widget.pack()
 
         # Path to the marker icon
-        icon_path = "GPS/lazik.png"
+        icon_path = "newRover.png"
         img = Image.open(icon_path)
-        img = img.resize((80, 50))
+        img = img.resize((50, 50))
+        img = img.rotate(15, Image.NEAREST, expand = 1)
         self.icon = ImageTk.PhotoImage(img)
 
         # Initial markers

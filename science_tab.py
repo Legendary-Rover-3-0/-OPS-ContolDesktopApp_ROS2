@@ -476,7 +476,7 @@ class ScienceTab(QWidget):
 
     def launch_plot_app(self):
         try:
-            subprocess.Popen(["python3", "wykresy.py"])
+            subprocess.Popen(["python", "wykresy.py"])
         except Exception as e:
             self.node.get_logger().error(f"Nie udało się uruchomić aplikacji z wykresami: {str(e)}")
     
@@ -484,7 +484,7 @@ class ScienceTab(QWidget):
         try:
             # Launch the Tkinter-based radiation map window
             radiation_map_path = os.path.join(os.path.dirname(__file__), 'GPS/radiation_map.py')
-            QProcess.startDetached('python3', [radiation_map_path])
+            QProcess.startDetached('python', [radiation_map_path])
         except Exception as e:
             self.node.get_logger().error(f"Nie udało się uruchomić aplikacji z radiacją: {str(e)}")
 
