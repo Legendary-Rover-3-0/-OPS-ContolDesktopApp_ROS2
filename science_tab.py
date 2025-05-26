@@ -27,17 +27,19 @@ class ScienceTab(QWidget):
 
         # Stany urządzeń
 # Stany urządzeń
-        self.basic = [10, 20, 30, 40, 50, 60]
-        self.servo_states = self.basic.copy()
+        #self.basic = [10, 20, 30, 40, 50, 60]
 
         self.servo_presets = {
-            0: [20, 60, 170],   # Presety dla serwa 0 (Serwo 1)
-            1: [40, 80, 162],   # Presety dla serwa 1 (Serwo 2)
-            2: [10, 45, 135],   # Presety dla serwa 2 (Serwo 3)
-            3: [30, 90, 150],   # Presety dla serwa 3 (Serwo 4)
-            4: [15, 75, 165],   # Presety dla serwa 4 (Serwo 5)
-            5: [25, 85, 175]    # Presety dla serwa 5 (Serwo 6)
+            0: [140, 70, 0],   # Presety dla serwa 0 (Serwo 1)
+            1: [134, 67, 0],   # Presety dla serwa 1 (Serwo 2)
+            2: [63, 121, 180],   # Presety dla serwa 2 (Serwo 3)
+            3: [100, 55, 10],   # Presety dla serwa 3 (Serwo 4)
+            4: [80, 110, 140],   # Presety dla serwa 4 (Serwo 5)
+            5: [57, 118, 180]    # Presety dla serwa 5 (Serwo 6)
         }
+        self.basic = [i[0] for i in self.servo_presets.values()]  # Ustawienie wartości podstawowych z presetów
+        self.servo_states = self.basic.copy()
+        print(f"Basic servo positions: {self.basic}")
         self.pump_states = [False] * 2
         self.led_brightness = 0
 
@@ -164,10 +166,13 @@ class ScienceTab(QWidget):
 
         self.servo_buttons = []  # Przechowuje przyciski presetów
         self.servo_spinboxes = []  # Przechowuje spinboxy
-
+        self.servo_labels = ["Pojemnik lewy", "Pojemnik kwadratowy lewy",
+                             "Pojemnik kwadratowy prawy", "Rewolwer lewy",
+                             "Rewolwer prawy", "Pojemnik prawy"]  # Przechowuje etykiety serw
         for i in range(6):
             # Etykieta serwa
-            servo_layout.addWidget(QLabel(f"Serwo {i+1}:"), i, 0)
+            #servo_layout.addWidget(QLabel(f"Serwo {i+1}:"), i, 0)
+            servo_layout.addWidget(QLabel(f"{self.servo_labels[i]}:"), i, 0)
             
             # Przyciski presetów (teraz brane z konfiguracji)
             btn_frame = QFrame()
