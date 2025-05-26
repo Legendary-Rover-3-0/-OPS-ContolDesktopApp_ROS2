@@ -88,8 +88,8 @@ class SerialReceiverNode(Node):
                 linear_x = frame[2]
                 linear_y = frame[3]
                 linear_z = frame[4]
-                angular_y = frame[5]
-                angular_x = frame[6]
+                angular_x = frame[5]
+                angular_y = frame[6]
                 angular_z = frame[7]
                 checksum = frame[8]
 
@@ -100,8 +100,8 @@ class SerialReceiverNode(Node):
                 linear_x = self.byte_to_float(linear_x)
                 linear_y = self.byte_to_float(linear_y)
                 linear_z = self.byte_to_float(linear_z)
-                angular_y = self.byte_to_float(angular_y)
                 angular_x = self.byte_to_float(angular_x)
+                angular_y = self.byte_to_float(angular_y)
                 angular_z = self.byte_to_float(angular_z)
                 
                 twist = Twist()

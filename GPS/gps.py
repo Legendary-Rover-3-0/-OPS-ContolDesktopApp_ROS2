@@ -8,6 +8,8 @@ from sensor_msgs.msg import NavSatFix
 import rclpy
 import sqlite3
 from datetime import datetime
+from sensor_msgs.msg import Imu
+import math
 
 # Global variable for marker coordinates
 # rover_coords = {'x': 50.01817, 'y': 21.98669}
@@ -19,6 +21,8 @@ class GPSTab(Node):
     def __init__(self):
         super().__init__('gps_tab')
         self.create_subscription(NavSatFix, '/gps/fix', self.gps_callback, 10)
+        self.create_subscription(Imu, '/imu/data', self.imu_callback, 10)
+        self.rover_yaw_deg = 0  # przechowuj aktualny yaw w stopniach
         
         # Initial setup
         self.root = tk.Tk()
@@ -38,10 +42,8 @@ class GPSTab(Node):
 
         # Path to the marker icon
         icon_path = "newRover.png"
-        img = Image.open(icon_path)
-        img = img.resize((50, 50))
-        img = img.rotate(15, Image.NEAREST, expand = 1)
-        self.icon = ImageTk.PhotoImage(img)
+        self.original_icon_img = Image.open(icon_path).resize((50, 50))  # PIL.Image
+        self.icon = ImageTk.PhotoImage(self.original_icon_img)
 
         # Initial markers
         self.rover_marker = self.map_widget.set_marker(rover_coords['x'], rover_coords['y'], text="Rover", icon=self.icon)
@@ -208,6 +210,18 @@ class GPSTab(Node):
         # Update the position label in the main Tkinter thread
         self.root.after(0, self.update_position_label)
 
+    def imu_callback(self, msg: Imu):
+        """Aktualizuje orientację łazika (yaw) z wiadomości IMU"""
+        q = msg.orientation
+        # Konwersja quaternionu na yaw (kąt w płaszczyźnie Z)
+        siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+        yaw = math.atan2(siny_cosp, cosy_cosp)
+        self.rover_yaw_deg = math.degrees(yaw)
+
+        # Odśwież ikonę na mapie w głównym wątku
+        self.root.after(0, self.update_rover_icon)
+
     def update_rover_position(self):
         global rover_coords, targets
         # Update the rover marker position
@@ -234,6 +248,22 @@ class GPSTab(Node):
         
         # Schedule the next update
         self.root.after(500, self.update_rover_position)
+
+    def update_rover_icon(self):
+        """Obraca ikonę łazika i odtwarza marker z nową ikoną"""
+        rotated = self.original_icon_img.rotate(-self.rover_yaw_deg, expand=True)
+        self.icon = ImageTk.PhotoImage(rotated)
+
+        # Zapamiętaj pozycję przed usunięciem
+        lat, lon = rover_coords['x'], rover_coords['y']
+
+        # Usuń stary marker
+        if self.rover_marker:
+            self.rover_marker.delete()
+
+        # Utwórz nowy marker z nową ikoną
+        self.rover_marker = self.map_widget.set_marker(lat, lon, text="Rover", icon=self.icon)
+
 
     def update_position_label(self):
         """Update position label with new coordinates."""

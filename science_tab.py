@@ -10,7 +10,7 @@ import os
 import datetime
 import config
 import subprocess
-
+import time
 
 class ScienceTab(QWidget):
     def __init__(self, node: Node, serva):
@@ -460,15 +460,18 @@ class ScienceTab(QWidget):
         self.update_button_style(self.heater_off_button, config.BUTTON_OFF_COLOR if not self.heater_state else config.BUTTON_DEFAULT_COLOR)
 
     def set_drill_direction(self, direction):
+        if self.drill_state:
+            self.send_control_command(0, 0)
+            time.sleep(0.5)
         if direction == "left":
             self.drill_direction = "left"
-            self.serva.set_servo_position(2, 10)
+            self.serva.set_servo_position(2, 100)
             self.drill_left_button.setStyleSheet("background-color: green;")
             self.drill_right_button.setStyleSheet("")
             self.drill_right_button.setChecked(False)
         elif direction == "right":
             self.drill_direction = "right"
-            self.serva.set_servo_position(2, 100)
+            self.serva.set_servo_position(2, 10)
             self.drill_right_button.setStyleSheet("background-color: green;")
             self.drill_left_button.setStyleSheet("")
             self.drill_left_button.setChecked(False)
