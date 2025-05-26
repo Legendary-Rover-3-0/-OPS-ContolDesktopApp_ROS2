@@ -1,7 +1,7 @@
 import os
 import datetime
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
-                            QPushButton, QTabWidget)
+                            QPushButton, QTabWidget, QSpinBox, QLabel, QGroupBox)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.dates as mdates
@@ -11,12 +11,39 @@ class PlotApp(QWidget):
     def __init__(self):
         super().__init__()
         self.data_directory = "sensor_data"  # Katalog z danymi
+        self.max_readings = 100  # Domyślna maksymalna liczba odczytów
         self.init_ui()
         self.setWindowTitle("Science Data Visualizer")
         self.setGeometry(100, 100, 1200, 800)
 
     def init_ui(self):
         main_layout = QVBoxLayout()
+
+        # Panel kontrolny
+        control_group = QGroupBox("Ustawienia wyświetlania")
+        control_layout = QHBoxLayout()
+        
+        # Przycisk odświeżania
+        refresh_button = QPushButton('Odśwież wszystkie wykresy')
+        refresh_button.clicked.connect(self.refresh_all_plots)
+        
+        # Kontrolka do ustawienia maksymalnej liczby odczytów
+        readings_label = QLabel('Maks. liczba odczytów:')
+        self.readings_spinbox = QSpinBox()
+        self.readings_spinbox.setMinimum(10)
+        self.readings_spinbox.setMaximum(10000)
+        self.readings_spinbox.setValue(self.max_readings)
+        
+        # Przycisk akceptacji zmian
+        accept_button = QPushButton('Zaakceptuj')
+        accept_button.clicked.connect(self.apply_settings)
+        
+        control_layout.addWidget(refresh_button)
+        control_layout.addStretch()
+        control_layout.addWidget(readings_label)
+        control_layout.addWidget(self.readings_spinbox)
+        control_layout.addWidget(accept_button)
+        control_group.setLayout(control_layout)
 
         # Zakładki dla różnych typów wykresów
         self.tabs = QTabWidget()
@@ -34,15 +61,16 @@ class PlotApp(QWidget):
         self.tabs.addTab(self.create_plot_tab(self.humidity_tab, "Wilgotność"), "Wilgotność [%]")
         self.tabs.addTab(self.create_plot_tab(self.radiation_tab, "Promieniowanie"), "Promien. [CPM]")
         
-        # Przycisk odświeżania
-        refresh_button = QPushButton('Odśwież wszystkie wykresy')
-        refresh_button.clicked.connect(self.refresh_all_plots)
-        
+        main_layout.addWidget(control_group)
         main_layout.addWidget(self.tabs)
-        main_layout.addWidget(refresh_button)
         self.setLayout(main_layout)
         
         # Pierwsze ładowanie danych
+        self.refresh_all_plots()
+
+    def apply_settings(self):
+        """Zastosuj ustawienia po kliknięciu przycisku Zaakceptuj"""
+        self.max_readings = self.readings_spinbox.value()
         self.refresh_all_plots()
 
     def create_plot_tab(self, tab, title):
@@ -58,13 +86,27 @@ class PlotApp(QWidget):
     def load_data_from_file(self, filename):
         timestamps = []
         values = []
+        now = datetime.datetime.now()
+        one_hour_ago = now - datetime.timedelta(hours=1)
+        
         try:
             with open(os.path.join(self.data_directory, filename), "r") as f:
-                for line in f:
+                # Odczytaj wszystkie linie i odwróć kolejność (najnowsze na końcu)
+                lines = f.readlines()
+                
+                # Ogranicz liczbę odczytów do max_readings
+                lines = lines[-self.max_readings:]
+                
+                for line in lines:
                     parts = line.strip().split(", ")
                     if len(parts) >= 2:
                         try:
                             timestamp = datetime.datetime.strptime(parts[0], "%Y-%m-%d %H:%M:%S")
+                            
+                            # Pomijaj dane starsze niż godzina
+                            if timestamp < one_hour_ago:
+                                continue
+                                
                             # Dla plików z wieloma wartościami (CO2, metan)
                             if len(parts) > 2:
                                 for i, val in enumerate(parts[1:]):
@@ -121,7 +163,7 @@ class PlotApp(QWidget):
         ax.xaxis.set_major_locator(mdates.AutoDateLocator())
         
         ax.set_ylabel(ylabel)
-        ax.set_title(tab.title)
+        ax.set_title(f"{tab.title} (ostatnie {len(timestamps[0])} odczytów)")
         ax.legend(loc='upper right')
         ax.grid(True, linestyle='--', alpha=0.7)
         tab.figure.autofmt_xdate()
