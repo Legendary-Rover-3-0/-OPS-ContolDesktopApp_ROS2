@@ -2,10 +2,10 @@ import threading
 import time
 import pygame
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QGroupBox, QGridLayout
-from PyQt6.QtWidgets import (QTextEdit, QScrollArea, QFrame)  # Dodaj te importy na górze pliku
+from PyQt6.QtWidgets import (QTextEdit, QScrollArea, QFrame)
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
-from std_msgs.msg import String  # Dodano String dla danych RFID
+from std_msgs.msg import String, Float32  # Dodano Float32 dla temperatury
 from geometry_msgs.msg import Twist
 import config
 
@@ -17,29 +17,64 @@ class ManipulatorTab(QWidget):
         self.gamepads = gamepads
         self.selected_gamepad = None
         self.running = False
-        self.is_gamepad_active = False  # Dodana flaga kontrolująca aktywność gamepada
+        self.is_gamepad_active = False
         self.gamepad_thread = None
 
         # Inicjalizacja wartości dla 6 stopni swobody
-        self.current_values = [0.0] * 6  # Zmiana na wartości zmiennoprzecinkowe
-        self.sensitivity = config.MANI_DEFAULT_VALUE  # Domyślny krok ruchu, regulowany suwakiem
+        self.current_values = [0.0] * 6
+        self.sensitivity = config.MANI_DEFAULT_VALUE
 
         # Inicjalizacja danych RFID
         self.rfid_data = "Brak danych"
+        
+        # Inicjalizacja danych temperatury
+        self.cpu_temp = 0.0
+        self.gpu_temp = 0.0
 
         self.init_ui()
         self.init_ros_publishers()
         self.init_ros_subscribers()
 
     def init_ui(self):
-        main_layout = QVBoxLayout()  # Główny układ pionowy
+        main_layout = QVBoxLayout()
+
+        # Sekcja temperatury
+        temp_group = QGroupBox("Temperatury")
+        temp_layout = QHBoxLayout()
+        
+        self.cpu_temp_label = QLabel("CPU: --.-- °C")
+        self.gpu_temp_label = QLabel("GPU: --.-- °C")
+        
+        temp_layout.addWidget(self.cpu_temp_label)
+        temp_layout.addWidget(self.gpu_temp_label)
+        temp_group.setLayout(temp_layout)
+        main_layout.addWidget(temp_group)
+
+        # Globalny suwak czułości
+        global_sens_group = QGroupBox("Globalna czułość")
+        global_sens_layout = QHBoxLayout()
+        
+        self.global_sensitivity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.global_sensitivity_slider.setMinimum(1)
+        self.global_sensitivity_slider.setMaximum(100)
+        self.global_sensitivity_slider.setValue(int(self.sensitivity))
+        self.global_sensitivity_slider.valueChanged.connect(self.update_global_sensitivity)
+        
+        self.global_sens_value_label = QLabel(f"{self.sensitivity}")
+        self.global_sens_value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        global_sens_layout.addWidget(QLabel("Czułość wszystkich stopni:"))
+        global_sens_layout.addWidget(self.global_sensitivity_slider)
+        global_sens_layout.addWidget(self.global_sens_value_label)
+        global_sens_group.setLayout(global_sens_layout)
+        main_layout.addWidget(global_sens_group)
 
         # Kolumna dla manipulatora
         self.mani_group = QGroupBox("Manipulator Control")
         mani_layout = QGridLayout()
 
         # Inicjalizacja suwaków dla każdego stopnia swobody
-        self.sensitivities = [config.MANI_DEFAULT_VALUE] * 6  # Domyślnie 50 dla każdego stopnia
+        self.sensitivities = [config.MANI_DEFAULT_VALUE] * 6
         self.sensitivity_sliders = []
 
         # Etykiety i suwaki dla każdego stopnia swobody
@@ -62,16 +97,13 @@ class ManipulatorTab(QWidget):
             slider.setMinimum(1)
             slider.setMaximum(100)
             slider.setValue(int(self.sensitivities[i]))
-            slider.valueChanged.connect(lambda value, idx=i: self.update_sensitivity(idx, value))  # Przekazujemy indeks
+            slider.valueChanged.connect(lambda value, idx=i: self.update_sensitivity(idx, value))
 
-            # Ustawienie stałej szerokości suwaka
-            slider.setFixedWidth(200)  # Możesz dostosować szerokość do swoich potrzeb
-
+            slider.setFixedWidth(200)
             self.sensitivity_sliders.append(slider)
             mani_layout.addWidget(QLabel(f"Czułość Stopnia {i+1}"), i, 1)
             mani_layout.addWidget(slider, i, 2)
 
-            # Dodanie wartości liczbowej obok suwaka
             value_label = QLabel(f"{self.sensitivities[i]}")
             value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.sensitivity_sliders[i].valueChanged.connect(lambda value, lbl=value_label: lbl.setText(f"{value}"))
@@ -80,16 +112,14 @@ class ManipulatorTab(QWidget):
         self.mani_group.setLayout(mani_layout)
         main_layout.addWidget(self.mani_group)
 
-        # Sekcja RFID z możliwością przewijania
+        # Sekcja RFID
         self.rfid_group = QGroupBox("RFID Data")
         rfid_layout = QVBoxLayout()
         
-        # Tworzymy obszar przewijania
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         
-        # Tworzymy widget, który będzie zawierał tekst
         self.rfid_text = QTextEdit()
         self.rfid_text.setReadOnly(True)
         self.rfid_text.setPlainText(self.rfid_data)
@@ -103,7 +133,7 @@ class ManipulatorTab(QWidget):
                 font-size: 14px;
             }
         """)
-        self.rfid_text.setMaximumHeight(300)  # Ogranicz wysokość
+        self.rfid_text.setMaximumHeight(300)
         
         scroll_area.setWidget(self.rfid_text)
         rfid_layout.addWidget(scroll_area)
@@ -121,19 +151,19 @@ class ManipulatorTab(QWidget):
             }
             QSlider {
                 background: #555;
-                min-width: 200px;  /* Stała szerokość suwaka */
-                margin: 0 10px;    /* Marginesy dla suwaka */
+                min-width: 200px;
+                margin: 0 10px;
             }
             QSlider::groove:horizontal {
                 background: #666;
                 height: 8px;
                 border-radius: 4px;
-                margin: 0px;      /* Usunięcie marginesów w groove */
+                margin: 0px;
             }
             QSlider::handle:horizontal {
                 background: #ddd;
                 width: 18px;
-                margin: -5px 0;    /* Dostosowanie marginesów dla uchwytu */
+                margin: -5px 0;
                 border-radius: 9px;
             }
             QGroupBox {
@@ -156,23 +186,38 @@ class ManipulatorTab(QWidget):
 
     def init_ros_subscribers(self):
         self.node.create_subscription(String, "/RFID/string_data", self.rfid_callback, 10)
+        # Subskrypcje temperatury
+        self.node.create_subscription(Float32, "/jetson/temperature/cpu", self.cpu_temp_callback, 10)
+        self.node.create_subscription(Float32, "/jetson/temperature/gpu", self.gpu_temp_callback, 10)
+
+    def cpu_temp_callback(self, msg: Float32):
+        self.cpu_temp = msg.data
+        self.cpu_temp_label.setText(f"CPU: {self.cpu_temp:.2f} °C")
+
+    def gpu_temp_callback(self, msg: Float32):
+        self.gpu_temp = msg.data
+        self.gpu_temp_label.setText(f"GPU: {self.gpu_temp:.2f} °C")
 
     def rfid_callback(self, msg: String):
         self.rfid_data = msg.data
         self.rfid_text.setPlainText(f"RFID: {self.rfid_data}")
-        # Przewiń na dół, aby pokazać najnowsze dane
         self.rfid_text.verticalScrollBar().setValue(
             self.rfid_text.verticalScrollBar().maximum()
         )
+
+    def update_global_sensitivity(self, value):
+        # Ustawia tę samą czułość dla wszystkich stopni
+        for i in range(6):
+            self.sensitivity_sliders[i].setValue(value)
+            self.sensitivities[i] = float(value)
+        self.global_sens_value_label.setText(f"{value}")
 
     def set_selected_gamepad(self, gamepad):
         self.selected_gamepad = gamepad
         if self.selected_gamepad and (self.gamepad_thread is None or not self.gamepad_thread.is_alive()):
             self.running = True
-            self.gamepad_thread = threading.Thread(target=self.read_gamepad)#, daemon=True)
+            self.gamepad_thread = threading.Thread(target=self.read_gamepad)
             self.gamepad_thread.start()
-        # else:
-        #     self.running = False
 
     def read_gamepad(self):
         while self.running and self.selected_gamepad:
