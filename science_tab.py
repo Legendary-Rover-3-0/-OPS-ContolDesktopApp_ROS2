@@ -24,11 +24,6 @@ class ScienceTab(QWidget):
         self.data_directory = "sensor_data"
         os.makedirs(self.data_directory, exist_ok=True)
 
-        self.active_preset_buttons = {}  # do zaznaczania aktywnych presetów
-        self.servo_display_order = [6,1,2,3,4,5]  # dowolna kolejność wyświetlania serw
-        self.servo_display_order = [i - 1 for i in self.servo_display_order]
-
-
 
         # Stany urządzeń
 # Stany urządzeń
@@ -170,57 +165,46 @@ class ScienceTab(QWidget):
         servo_group = QGroupBox("Sterowanie Serwomechanizmami")
         servo_layout = QGridLayout()
 
-        self.servo_buttons = []
-        self.servo_spinboxes = [None] * 6
-        self.active_preset_buttons = {}
-        #self.servo_display_order = [2, 0, 5, 1, 3, 4]
-        self.servo_labels = ["[1] Pojemnik lewy", "[2] Pojemnik kwadratowy lewy",
-                            "[3] Pojemnik kwadratowy prawy", "[4] Rewolwer lewy",
-                            "[5] Rewolwer prawy", "[6]Pojemnik prawy"]
-
-        for row_index, servo_index in enumerate(self.servo_display_order):
-            servo_layout.addWidget(QLabel(f"{self.servo_labels[servo_index]}:"), row_index, 0)
-
-            # Przyciski presetów
+        self.servo_buttons = []  # Przechowuje przyciski presetów
+        self.servo_spinboxes = []  # Przechowuje spinboxy
+        self.servo_labels = ["Pojemnik lewy", "Pojemnik kwadratowy lewy",
+                             "Pojemnik kwadratowy prawy", "Rewolwer lewy",
+                             "Rewolwer prawy", "Pojemnik prawy"]  # Przechowuje etykiety serw
+        for i in range(6):
+            # Etykieta serwa
+            #servo_layout.addWidget(QLabel(f"Serwo {i+1}:"), i, 0)
+            servo_layout.addWidget(QLabel(f"{self.servo_labels[i]}:"), i, 0)
+            
+            # Przyciski presetów (teraz brane z konfiguracji)
             btn_frame = QFrame()
             btn_layout = QHBoxLayout(btn_frame)
             btn_layout.setContentsMargins(0, 0, 0, 0)
-
-            default_value = self.basic[servo_index]
-
-            for angle in self.servo_presets[servo_index]:
+            
+            for angle in self.servo_presets[i]:  # Używamy presetów dla danego serwa
                 btn = QPushButton(str(angle))
                 btn.setFixedWidth(60)
-                btn.clicked.connect(lambda _, idx=servo_index, a=angle, b=btn: self.set_servo_preset(idx, a, b))
+                btn.clicked.connect(lambda _, idx=i, a=angle: self.set_servo_preset(idx, a))
                 btn_layout.addWidget(btn)
                 self.servo_buttons.append(btn)
-
-                if angle == default_value:
-                    btn.setStyleSheet("background-color: #007acc; color: white;")
-                    self.active_preset_buttons[servo_index] = btn
-
-            servo_layout.addWidget(btn_frame, row_index, 1)
-
-            # SpinBox + Ustaw
+            
+            servo_layout.addWidget(btn_frame, i, 1)
+            
+            # SpinBox dla dowolnej wartości
             spinbox = QSpinBox()
             spinbox.setRange(0, 180)
-            spinbox.setValue(default_value)
+            spinbox.setValue(self.basic[i])
             spinbox.setFixedWidth(100)
-
             set_btn = QPushButton("Ustaw")
             set_btn.setFixedWidth(150)
-            set_btn.clicked.connect(lambda _, idx=servo_index: self.set_servo_custom(idx))
-
-            servo_layout.addWidget(spinbox, row_index, 2)
-            servo_layout.addWidget(set_btn, row_index, 3)
-
-            self.servo_spinboxes[servo_index] = spinbox  # ← najważniejsze
+            set_btn.clicked.connect(lambda _, idx=i: self.set_servo_custom(idx))
+            
+            servo_layout.addWidget(spinbox, i, 2)
+            servo_layout.addWidget(set_btn, i, 3)
+            
+            self.servo_spinboxes.append(spinbox)
 
         servo_group.setLayout(servo_layout)
         right_scroll_layout.addWidget(servo_group)
-
-
-
         
         # Grupa sterowania pompami
         pump_group = QGroupBox("Sterowanie Pompami")
@@ -392,18 +376,9 @@ class ScienceTab(QWidget):
         with open(f"{self.data_directory}/radiation.txt", "a") as f:
             f.write(f"{timestamp}, {radiation_value:.1f}\n")
 
-    def set_servo_preset(self, index, angle, button):
+    def set_servo_preset(self, index, angle):
         self.servo_spinboxes[index].setValue(angle)
         self.set_servo(index)
-
-        prev_btn = self.active_preset_buttons.get(index)
-        if prev_btn and prev_btn != button:
-            prev_btn.setStyleSheet("")
-
-        button.setStyleSheet("background-color: #007acc; color: white;")
-        self.active_preset_buttons[index] = button
-
-
 
     def set_servo_custom(self, index):
         self.set_servo(index)
