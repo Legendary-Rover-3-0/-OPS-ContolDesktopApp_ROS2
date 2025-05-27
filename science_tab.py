@@ -116,7 +116,7 @@ class ScienceTab(QWidget):
         # Ramka Promieniowanie
         radiation_frame = QGroupBox("Promieniowanie")
         radiation_layout = QVBoxLayout()
-        self.radiation_label = QLabel("--- CPM")
+        self.radiation_label = QLabel("--- uSv/h")
         self.radiation_label.setFont(QFont('Arial', 12))
         radiation_layout.addWidget(self.radiation_label)
         radiation_frame.setLayout(radiation_layout)
@@ -136,6 +136,13 @@ class ScienceTab(QWidget):
         self.radiation_app_button.setFixedHeight(40)
         self.radiation_app_button.clicked.connect(self.launch_radiation_app)
         left_scroll_layout.addWidget(self.radiation_app_button)
+
+        # Przycisk do uruchomienia skryptu i pobrania mapy
+        self.generate_map_button = QPushButton('🌍 Generuj mapę radiacji')
+        self.generate_map_button.setFont(QFont('Arial', 12))
+        self.generate_map_button.setFixedHeight(40)
+        self.generate_map_button.clicked.connect(self.generate_radiation_map)
+        left_scroll_layout.addWidget(self.generate_map_button)
         
         left_scroll_layout.addStretch()
         left_scroll.setWidget(left_scroll_content)
@@ -375,7 +382,7 @@ class ScienceTab(QWidget):
 
     def radiation_callback(self, msg):
         radiation_value = msg.data
-        self.radiation_label.setText(f"{radiation_value:.1f} CPM")
+        self.radiation_label.setText(f"{radiation_value:.1f} uSv/h")
         
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(f"{self.data_directory}/radiation.txt", "a") as f:
@@ -496,6 +503,12 @@ class ScienceTab(QWidget):
         except Exception as e:
             self.node.get_logger().error(f"Nie udało się uruchomić aplikacji z radiacją: {str(e)}")
 
+    def generate_radiation_map(self):
+        try:
+            generate_html_map = os.path.join(os.path.dirname(__file__), 'GPS/generate_radiation_map.py')
+            QProcess.startDetached('python', [generate_html_map])
+        except Exception as e:
+            self.node.get_logger().error(f"Nie udało się uruchomić aplikacji: {str(e)}")
 
     def update_button_style(self, button, color):
         button.setStyleSheet(f"background-color: {color};")
