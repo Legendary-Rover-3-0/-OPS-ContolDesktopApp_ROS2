@@ -4,7 +4,7 @@ from geometry_msgs.msg import Twist
 import serial
 import serial.tools.list_ports
 import threading
-from std_msgs.msg import Int8MultiArray, Int32MultiArray
+from std_msgs.msg import Int8MultiArray, Int32MultiArray, Int16
 import argparse
 
 debug = True
@@ -18,6 +18,9 @@ class SerialReceiverNode(Node):
         self.button_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/led_state_topic', 10)
         self.servo_publisher = self.create_publisher(Int32MultiArray, '/ESP32_GIZ/servo_angles_topic', 10)
         self.koszelnik_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/output_state_topic', 10)
+        self.science_servo_publisher = self.create_publisher(Int32MultiArray, '/servos_urc_control', 10)
+        self.science_pump_publisher = self.create_publisher(Int8MultiArray, '/pumps_urc_control', 10)
+        self.science_led_publisher = self.create_publisher(Int16, '/led_urc_control', 10)
 
         try:
 
@@ -163,6 +166,49 @@ ang_x={angular_x:.2f}, ang_y={angular_y:.2f}, ang_z={angular_z:.2f}")
                 msg.data = [drill, koszelnik, heater]
                 if not prevent_ROS: self.koszelnik_publisher.publish(msg)
                 if debug: self.get_logger().info(f"Odebrano GK: drill={drill}, koszelnik={koszelnik}, heater={heater}")
+
+            elif header == b'SS' and len(frame) == 9:
+                s_vals = list(frame[2:8])  # 6 serw
+                checksum = frame[8]
+
+                if sum(s_vals) % 256 != checksum:
+                    if debug: self.get_logger().warn("Nieprawidłowa suma kontrolna (SS).")
+                    return
+
+                msg = Int32MultiArray()
+                msg.data = s_vals
+                if not prevent_ROS: self.science_servo_publisher.publish(msg)
+                if debug: self.get_logger().info(f"Odebrano SS: s1={s_vals[0]}, s2={s_vals[1]}, s3={s_vals[2]}, s4={s_vals[3]}, s5={s_vals[4]}, s6={s_vals[5]}")
+            
+            elif header == b'SL' and len(frame) == 4:
+                brightness = frame[2]
+                checksum = frame[3]
+
+                if brightness % 256 != checksum:
+                    if debug: self.get_logger().warn("Nieprawidłowa suma kontrolna (SL).")
+                    return
+
+                msg = Int16()
+                msg.data = brightness
+                if not prevent_ROS: self.science_led_publisher.publish(msg)
+                if debug: self.get_logger().info(f"Odebrano SL: LED={brightness}")
+
+            elif header == b'SP' and len(frame) == 4:
+                pumps_byte = frame[2]
+                checksum = frame[3]
+
+                if pumps_byte % 256 != checksum:
+                    if debug: self.get_logger().warn("Nieprawidłowa suma kontrolna (SP).")
+                    return
+
+                # Rozbicie na 2 pompki (bit 0 i 1)
+                p1 = (pumps_byte >> 0) & 0x01
+                p2 = (pumps_byte >> 1) & 0x01
+
+                msg = Int8MultiArray()
+                msg.data = [p1, p2]
+                if not prevent_ROS: self.science_pump_publisher.publish(msg)
+                if debug: self.get_logger().info(f"Odebrano SP: pompa1={p1}, pompa2={p2}")
 
             else:
                 if debug: self.get_logger().warn(f"Nieznana lub nieobsługiwana ramka: {frame}")

@@ -387,24 +387,35 @@ class ScienceTab(QWidget):
         if index is not None:
             angle = self.servo_spinboxes[index].value()
             self.servo_states[index] = angle
-        
-        msg = Int32MultiArray()
-        msg.data = self.servo_states
-        self.servo_publisher.publish(msg)
+
+        if self.node.communication_mode == 'ROS2':
+            msg = Int32MultiArray()
+            msg.data = self.servo_states
+            self.servo_publisher.publish(msg)
+
+        elif self.node.communication_mode == 'SATEL':
+            # Wysyłamy tylko 8-bitową wersję (wartości 0-255!)
+            self.node.send_serial_frame("SS", *[val & 0xFF for val in self.servo_states])
         
 
     def set_pump(self, index, state):
         self.pump_states[index] = state
+
+        if self.node.communication_mode == 'ROS2':
+            msg = Int8MultiArray()
+            msg.data = [int(pump) for pump in self.pump_states]
+            self.pump_publisher.publish(msg)
+
+        elif self.node.communication_mode == 'SATEL':
+            # Kodowanie 2 pomp w 1 bajcie
+            pumps_byte = 0
+            for i, val in enumerate(self.pump_states):
+                pumps_byte |= (val & 0x01) << i
+            self.node.send_serial_frame("SP", pumps_byte)
         
-        msg = Int8MultiArray()
-        msg.data = [int(pump) for pump in self.pump_states]
-        self.pump_publisher.publish(msg)
-        
-        # Aktualizacja przycisków
         on_btn, off_btn = self.pump_buttons[index]
         on_btn.setStyleSheet("background-color: green;" if state else "")
         off_btn.setStyleSheet("background-color: red;" if not state else "")
-        
 
     def led_slider_changed(self, value):
         self.led_spinbox.setValue(value)
@@ -413,17 +424,21 @@ class ScienceTab(QWidget):
         self.led_slider.setValue(value)
 
     def set_led_state(self, brightness):
-        """Ustawia stan LED i aktualizuje kolory przycisków"""
         self.led_brightness = brightness
         self.led_state = brightness > 0
-        
-        msg = Int16()
-        msg.data = brightness
-        self.led_publisher.publish(msg)
-        
-        # Aktualizacja przycisków
-        self.update_button_style(self.led_on_btn, config.BUTTON_ON_COLOR if self.led_state else config.BUTTON_DEFAULT_COLOR)
-        self.update_button_style(self.led_off_btn, config.BUTTON_OFF_COLOR if not self.led_state else config.BUTTON_DEFAULT_COLOR)
+
+        if self.node.communication_mode == 'ROS2':
+            msg = Int16()
+            msg.data = brightness
+            self.led_publisher.publish(msg)
+        elif self.node.communication_mode == 'SATEL':
+            self.node.send_serial_frame("SL", brightness & 0xFF)
+            
+        self.update_button_style(
+            self.led_on_btn, config.BUTTON_ON_COLOR if self.led_state else config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(
+            self.led_off_btn, config.BUTTON_OFF_COLOR if not self.led_state else config.BUTTON_DEFAULT_COLOR)
+
 
     
     def send_control_command(self, device_id, state):
