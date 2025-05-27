@@ -4,53 +4,64 @@ import folium
 from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import io
-import base64
 
-# Krok 1: Pobranie danych z bazy
+# 1. Pobranie danych
 conn = sqlite3.connect('GPS/radiation_data.db')
 cursor = conn.cursor()
 cursor.execute('SELECT latitude, longitude, radiation FROM radiation')
 rows = cursor.fetchall()
 conn.close()
 
-# Ekstrakcja danych
 lats = np.array([row[0] for row in rows])
 lons = np.array([row[1] for row in rows])
 vals = np.array([row[2] for row in rows])
 
-# Krok 2: Interpolacja
-grid_lat, grid_lon = np.mgrid[min(lats):max(lats):100j, min(lons):max(lons):100j]
+# 2. Interpolacja
+grid_lat, grid_lon = np.mgrid[
+    min(lats):max(lats):100j,
+    min(lons):max(lons):100j
+]
 grid_vals = griddata((lats, lons), vals, (grid_lat, grid_lon), method='cubic')
 
-# Krok 3: Wygenerowanie konturów BEZ osi i legendy
-fig, ax = plt.subplots(figsize=(8, 6))
-ax.axis('off')  # wyłączenie osi
-ax.contourf(grid_lon, grid_lat, grid_vals, levels=10, cmap=cm.jet)
+# 3a. Obraz z legendą (do zapisu, nie na mapę)
+fig1, ax1 = plt.subplots(figsize=(8, 6), dpi=150)
+ax1.set_position([0, 0, 1, 1])  # usunięcie wszelkich marginesów
+ax1.axis('off')
+contour1 = ax1.contourf(grid_lon, grid_lat, grid_vals, levels=10, cmap=cm.jet)
+ax1.scatter(lons, lats, c='black', s=10, marker='o')
+cbar = plt.colorbar(contour1, ax=ax1, orientation='vertical', fraction=0.046)
+cbar.set_label('Poziom radiacji')
+fig1.savefig("map_with_legend.png", bbox_inches='tight', pad_inches=0)
+plt.close(fig1)
+print("[✓] Zapisano obraz z legendą: map_with_legend.png")
 
-# Zapis jako obraz do bufora
-buf = io.BytesIO()
-plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
-buf.seek(0)
-img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-buf.close()
-plt.close()
+# 3b. Obraz bez legendy do mapy folium
+fig2, ax2 = plt.subplots(figsize=(8, 6), dpi=150)
+ax2.set_position([0, 0, 1, 1])  # dokładnie cała przestrzeń
+ax2.axis('off')
+ax2.contourf(grid_lon, grid_lat, grid_vals, levels=10, cmap=cm.jet)
+ax2.scatter(lons, lats, c='black', s=10, marker='o')
+fig2.savefig("map_no_legend.png", bbox_inches='tight', pad_inches=0)
+plt.close(fig2)
+print("[✓] Zapisano obraz bez legendy: map_no_legend.png")
 
-# Krok 4: Osadzenie na mapie folium
+# 4. Osadzenie obrazu na mapie folium
 center_lat = np.mean(lats)
 center_lon = np.mean(lons)
 m = folium.Map(location=[center_lat, center_lon], zoom_start=15)
 
-image_overlay = folium.raster_layers.ImageOverlay(
-    image=f"data:image/png;base64,{img_base64}",
-    bounds=[[min(lats), min(lons)], [max(lats), max(lons)]],
+bounds = [[min(lats), min(lons)], [max(lats), max(lons)]]
+overlay = folium.raster_layers.ImageOverlay(
+    name='Radiation Overlay',
+    image="map_no_legend.png",
+    bounds=bounds,
     opacity=0.6,
     interactive=False,
     cross_origin=False,
 )
-image_overlay.add_to(m)
+overlay.add_to(m)
 
-# Dodanie punktów pomiarowych
+# (opcjonalnie) punkty z popupami
 for lat, lon, val in zip(lats, lons, vals):
     folium.CircleMarker(
         location=[lat, lon],
@@ -76,7 +87,7 @@ legend_html = f"""
     font-size:14px;
     padding: 10px;
 ">
-<b>Radiation Level [uSv/h]</b><br>
+<b>Poziom radiacji</b><br>
 <svg width="130" height="200">
   <defs>
     <linearGradient id="grad" x1="0" x2="0" y1="0" y2="1">
@@ -98,6 +109,5 @@ legend_html = f"""
 
 m.get_root().html.add_child(folium.Element(legend_html))
 
-# Zapis mapy
-m.save("radiation_contour_map.html")
-print("Mapa zapisana jako radiation_contour_map.html")
+m.save("radiation_map_with_overlay.html")
+print("[✓] Mapa HTML zapisana jako: radiation_map_with_overlay.html")
