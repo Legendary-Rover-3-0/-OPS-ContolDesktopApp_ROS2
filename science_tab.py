@@ -42,6 +42,7 @@ class ScienceTab(QWidget):
         print(f"Basic servo positions: {self.basic}")
         self.pump_states = [False] * 2
         self.led_brightness = 0
+        self.led_state = False  # Dodajemy stan LED
 
         self.drill_state = False
         self.drill_direction = None  # None, 'left', or 'right'
@@ -163,13 +164,6 @@ class ScienceTab(QWidget):
         # Grupa sterowania serwami
         servo_group = QGroupBox("Sterowanie Serwomechanizmami")
         servo_layout = QGridLayout()
-        
-        self.servo_buttons = []  # Do przechowywania przycisków presetów
-        self.servo_spinboxes = []
-        
-        # Grupa sterowania serwami
-        servo_group = QGroupBox("Sterowanie Serwomechanizmami")
-        servo_layout = QGridLayout()
 
         self.servo_buttons = []  # Przechowuje przyciski presetów
         self.servo_spinboxes = []  # Przechowuje spinboxy
@@ -233,36 +227,28 @@ class ScienceTab(QWidget):
         pump_group.setLayout(pump_layout)
         right_scroll_layout.addWidget(pump_group)
         
-        # Grupa sterowania LED
+       # Grupa sterowania LED
         led_group = QGroupBox("Sterowanie LED")
         led_layout = QVBoxLayout()
-        
-        # Suwak
-        self.led_slider = QSlider(Qt.Orientation.Horizontal)
-        self.led_slider.setRange(0, 255)
-        self.led_slider.setValue(0)
-        self.led_slider.valueChanged.connect(self.led_slider_changed)
-        
-        # SpinBox
-        self.led_spinbox = QSpinBox()
-        self.led_spinbox.setRange(0, 255)
-        self.led_spinbox.setValue(0)
-        self.led_spinbox.valueChanged.connect(self.led_spinbox_changed)
-        
-        # Przycisk
-        self.led_set_btn = QPushButton("Zastosuj")
-        self.led_set_btn.clicked.connect(self.set_led_brightness)
-        
-        # Układ dla kontrolek LED
-        led_control_layout = QHBoxLayout()
-        led_control_layout.addWidget(QLabel("Jasność (0-255):"))
-        led_control_layout.addWidget(self.led_slider)
-        led_control_layout.addWidget(self.led_spinbox)
-        led_control_layout.addWidget(self.led_set_btn)
-        
-        led_layout.addLayout(led_control_layout)
+
+        # Przycisk Włącz
+        self.led_on_btn = QPushButton("Włącz")
+        self.led_on_btn.clicked.connect(lambda: self.set_led_state(255))
+
+        # Przycisk Wyłącz
+        self.led_off_btn = QPushButton("Wyłącz")
+        self.led_off_btn.clicked.connect(lambda: self.set_led_state(0))
+
+        # Układ dla przycisków LED
+        led_button_layout = QHBoxLayout()
+        led_button_layout.addWidget(QLabel("Sterowanie LED:"))
+        led_button_layout.addWidget(self.led_on_btn)
+        led_button_layout.addWidget(self.led_off_btn)
+
+        led_layout.addLayout(led_button_layout)
         led_group.setLayout(led_layout)
         right_scroll_layout.addWidget(led_group)
+
         
 
         # Grupa zdalnego sterowania
@@ -320,6 +306,8 @@ class ScienceTab(QWidget):
         self.update_button_style(self.koszelnik_off_button, config.BUTTON_OFF_COLOR)
         self.update_button_style(self.heater_on_button, config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.heater_off_button, config.BUTTON_OFF_COLOR)
+        self.update_button_style(self.led_on_btn, config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.led_off_btn, config.BUTTON_OFF_COLOR)
         
         right_scroll_layout.addStretch()
         right_scroll.setWidget(right_scroll_content)
@@ -424,12 +412,18 @@ class ScienceTab(QWidget):
     def led_spinbox_changed(self, value):
         self.led_slider.setValue(value)
 
-    def set_led_brightness(self):
-        brightness = self.led_spinbox.value()
+    def set_led_state(self, brightness):
+        """Ustawia stan LED i aktualizuje kolory przycisków"""
+        self.led_brightness = brightness
+        self.led_state = brightness > 0
+        
         msg = Int16()
         msg.data = brightness
         self.led_publisher.publish(msg)
-        self.led_brightness = brightness
+        
+        # Aktualizacja przycisków
+        self.update_button_style(self.led_on_btn, config.BUTTON_ON_COLOR if self.led_state else config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.led_off_btn, config.BUTTON_OFF_COLOR if not self.led_state else config.BUTTON_DEFAULT_COLOR)
 
     
     def send_control_command(self, device_id, state):
@@ -470,6 +464,10 @@ class ScienceTab(QWidget):
         # Grzałka
         self.update_button_style(self.heater_on_button, config.BUTTON_ON_COLOR if self.heater_state else config.BUTTON_DEFAULT_COLOR)
         self.update_button_style(self.heater_off_button, config.BUTTON_OFF_COLOR if not self.heater_state else config.BUTTON_DEFAULT_COLOR)
+        
+        # LED
+        self.update_button_style(self.led_on_btn, config.BUTTON_ON_COLOR if self.led_state else config.BUTTON_DEFAULT_COLOR)
+        self.update_button_style(self.led_off_btn, config.BUTTON_OFF_COLOR if not self.led_state else config.BUTTON_DEFAULT_COLOR)
 
     def set_drill_direction(self, direction):
         if self.drill_state:
