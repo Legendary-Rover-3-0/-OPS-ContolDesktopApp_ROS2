@@ -42,7 +42,7 @@ class GPSTab(Node):
         self.map_widget.pack()
 
         # Path to the marker icon
-        icon_path = "newRover.png"
+        icon_path = "rover_gps.png"
         self.original_icon_img = Image.open(icon_path).resize((50, 50))  # PIL.Image
         self.icon = ImageTk.PhotoImage(self.original_icon_img)
 
