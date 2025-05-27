@@ -20,6 +20,7 @@ START_TARGETS_TO_YAML = "" # TODO
 START_SATEL_DECODER = "/home/legendary/kubatk/start_satel.sh" # potrzebny parametr port # TODO
 START_SCIENCE_BACKUP = "" # TODO wrzuci ale gotowy
 PORT_DETAILS_PY_SCRIPT = "/home/legendary/kubatk/show_ports.sh"
+START_MAGNETOMETR = "/home/legendary/kubatk/magnetometr.sh"
 
 # Manipulator
 MANI_DEFAULT_VALUE = 100.0

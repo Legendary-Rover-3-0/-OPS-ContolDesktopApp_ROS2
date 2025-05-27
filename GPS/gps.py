@@ -5,6 +5,7 @@ import os
 import threading
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Float32
 import rclpy
 import sqlite3
 from datetime import datetime
@@ -21,7 +22,7 @@ class GPSTab(Node):
     def __init__(self):
         super().__init__('gps_tab')
         self.create_subscription(NavSatFix, '/gps/fix', self.gps_callback, 10)
-        self.create_subscription(Imu, '/imu/data', self.imu_callback, 10)
+        self.create_subscription(Float32, '/heading', self.heading_callback, 10)
         self.rover_yaw_deg = 0  # przechowuj aktualny yaw w stopniach
         
         # Initial setup
@@ -210,16 +211,9 @@ class GPSTab(Node):
         # Update the position label in the main Tkinter thread
         self.root.after(0, self.update_position_label)
 
-    def imu_callback(self, msg: Imu):
-        """Aktualizuje orientację łazika (yaw) z wiadomości IMU"""
-        q = msg.orientation
-        # Konwersja quaternionu na yaw (kąt w płaszczyźnie Z)
-        siny_cosp = 2 * (q.w * q.z + q.x * q.y)
-        cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
-        yaw = math.atan2(siny_cosp, cosy_cosp)
-        self.rover_yaw_deg = math.degrees(yaw)
-
-        # Odśwież ikonę na mapie w głównym wątku
+    def heading_callback(self, msg: Float32):
+        """Aktualizuje orientację łazika na podstawie topicu /heading"""
+        self.rover_yaw_deg = msg.data  # Zakładamy, że to kąt w stopniach
         self.root.after(0, self.update_rover_icon)
 
     def update_rover_position(self):

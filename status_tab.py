@@ -69,20 +69,20 @@ class StatusTab(QWidget):
         self.start_autonomy_button.clicked.connect(self.start_autonomy)
         ports_layout.addWidget(self.start_autonomy_button)
 
-        self.start_gps = QPushButton("Uruchom GPS")
+        self.start_gps = QPushButton("🛰️ Uruchom GPS")
         self.start_gps.clicked.connect(self.start_gps_callback)
         ports_layout.addWidget(self.start_gps)
         ports_layout.addStretch(100)
 
-        self.start_satel = QPushButton("Uruchom SATEL Decoder")
+        self.start_satel = QPushButton("📻 Uruchom SATEL Decoder")
         self.start_satel.clicked.connect(self.start_satel_callback)
         ports_layout.addWidget(self.start_satel)
 
-        self.start_science_backup = QPushButton("Uruchom Science Backup")
+        self.start_science_backup = QPushButton("🧪 Uruchom Science Backup")
         self.start_science_backup.clicked.connect(self.start_science_backup_callback)
         ports_layout.addWidget(self.start_science_backup)
 
-        self.show_ports_details = QPushButton("Pokaz porty szeregowe")
+        self.show_ports_details = QPushButton("📋 Pokaz porty szeregowe")
         self.show_ports_details.clicked.connect(self.show_ports_details_callback)
         ports_layout.addWidget(self.show_ports_details)
 
@@ -291,6 +291,9 @@ class StatusTab(QWidget):
         if selected:
             self.run_ansible(
                 f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected.text().replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected.text()}'"
+            )
+            self.run_ansible(
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_magnetometr {config.START_MAGNETOMETR}'"
             )
             self.run_ansible(
                 f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_targets_to_yaml {config.START_TARGETS_TO_YAML}'",
