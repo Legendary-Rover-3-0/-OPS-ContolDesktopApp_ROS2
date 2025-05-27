@@ -6,3 +6,5 @@ GPS/gps_targets.db
 /Science_data_backup
 GPS/radiation_data.db
 *.html
+map_no_legend.png
+map_with_legend.png
