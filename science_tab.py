@@ -30,12 +30,12 @@ class ScienceTab(QWidget):
         #self.basic = [10, 20, 30, 40, 50, 60]
 
         self.servo_presets = {
-            0: [140, 95, 50],   # Presety dla serwa 0 (Serwo 1)
+            0: [57, 98, 140],   # Presety dla serwa 0 (Serwo 1)
             1: [134, 92, 50],   # Presety dla serwa 1 (Serwo 2)
             2: [63, 104, 145],   # Presety dla serwa 2 (Serwo 3)
             3: [100, 55, 10],   # Presety dla serwa 3 (Serwo 4)
             4: [80, 125, 140],   # Presety dla serwa 4 (Serwo 5)
-            5: [57, 98, 140]    # Presety dla serwa 5 (Serwo 6)
+            5: [140, 95, 50]    # Presety dla serwa 5 (Serwo 6)
         }
         self.basic = [i[0] for i in self.servo_presets.values()]  # Ustawienie wartości podstawowych z presetów
         self.servo_states = self.basic.copy()
@@ -117,7 +117,7 @@ class ScienceTab(QWidget):
         # Ramka Promieniowanie
         radiation_frame = QGroupBox("Radiation")
         radiation_layout = QVBoxLayout()
-        self.radiation_label = QLabel("--- mSv/h")
+        self.radiation_label = QLabel("--- μSv/h")
         self.radiation_label.setFont(QFont('Arial', 12))
         radiation_layout.addWidget(self.radiation_label)
         radiation_frame.setLayout(radiation_layout)
@@ -164,12 +164,12 @@ class ScienceTab(QWidget):
         # Grupa sterowania serwami
         # Zmieniamy kolejność serw zgodnie z oczekiwaniami
         self.servo_display_order = [
-            ("Pojemnik kwadratowy prawy", 2),
-            ("Rewolwer prawy", 4),
-            ("Pojemnik prawy", 5),
-            ("Pojemnik kwadratowy lewy", 1),
-            ("Rewolwer lewy", 3),
-            ("Pojemnik lewy", 0)
+            ("Pojemnik kwadratowy prawy - Pojemnik 1", 2),
+            ("Rewolwer pojemnik 1", 4),
+            ("Pojemnik prawy - Pojemnik 2", 5),
+            ("Pojemnik kwadratowy lewy - Pojemnik 3", 1),
+            ("Rewolwer pojemnik 3", 3),
+            ("Pojemnik lewy - Pojemnik 4", 0)
         ]
 
             # Grupa sterowania serwami
@@ -383,7 +383,7 @@ class ScienceTab(QWidget):
 
     def radiation_callback(self, msg):
         radiation_value = msg.data
-        self.radiation_label.setText(f"{radiation_value:.1f} mSv/h")
+        self.radiation_label.setText(f"{radiation_value:.1f} μSv/h")
         
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(f"{self.data_directory}/radiation.txt", "a") as f:

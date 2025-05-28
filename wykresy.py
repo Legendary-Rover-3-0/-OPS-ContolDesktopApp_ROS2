@@ -60,7 +60,7 @@ class PlotApp(QWidget):
         self.tabs.addTab(self.create_plot_tab(self.methane_tab, "Concentration of Metan"), "Metan [ppm]")
         self.tabs.addTab(self.create_plot_tab(self.temp_tab, "Soil temperature"), "Temp. [°C]")
         self.tabs.addTab(self.create_plot_tab(self.humidity_tab, "Soil moisture"), "Moisture [%]")
-        self.tabs.addTab(self.create_plot_tab(self.radiation_tab, "Radiation"), "Radiation [mSv/h]")
+        self.tabs.addTab(self.create_plot_tab(self.radiation_tab, "Radiation"), "Radiation [μSv/h]")
         
         main_layout.addWidget(control_group)
         main_layout.addWidget(self.tabs)
@@ -206,7 +206,7 @@ class PlotApp(QWidget):
             (self.methane_tab, "methane.txt", "Metan [ppm]"),
             (self.temp_tab, "soil_temp.txt", "Temp. [°C]"),
             (self.humidity_tab, "soil_humidity.txt", "Moisture [%]"),
-            (self.radiation_tab, "radiation.txt", "Radiation [mSv/h]")
+            (self.radiation_tab, "radiation.txt", "Radiation [μSv/h]")
         ]
         
         for tab, filename, ylabel in plot_config:
