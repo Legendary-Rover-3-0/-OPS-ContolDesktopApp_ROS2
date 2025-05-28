@@ -162,57 +162,62 @@ class ScienceTab(QWidget):
         right_scroll_layout.setContentsMargins(5, 5, 5, 5)
 
         # Grupa sterowania serwami
+        # Zmieniamy kolejność serw zgodnie z oczekiwaniami
+        self.servo_display_order = [
+            ("Pojemnik kwadratowy prawy", 3),
+            ("Rewolwer prawy", 4),
+            ("Pojemnik prawy", 5),
+            ("Pojemnik kwadratowy lewy", 0),
+            ("Rewolwer lewy", 1),
+            ("Pojemnik lewy", 2)
+        ]
+
+        # Grupa sterowania serwami
         servo_group = QGroupBox("Sterowanie Serwomechanizmami")
         servo_layout = QGridLayout()
 
         self.servo_buttons = []  # Przechowuje przyciski presetów
         self.servo_spinboxes = []  # Przechowuje spinboxy
-        self.servo_labels = ["Pojemnik lewy", "Pojemnik kwadratowy lewy",
-                             "Pojemnik kwadratowy prawy", "Rewolwer lewy",
-                             "Rewolwer prawy", "Pojemnik prawy"]  # Przechowuje etykiety serw
-        self.servo_buttons = []  # Będzie to lista list - 6 serw, każdy z listą swoich przycisków
 
-        for i in range(6):
+        for row, (label, servo_idx) in enumerate(self.servo_display_order):
             # Etykieta serwa
-            #servo_layout.addWidget(QLabel(f"Serwo {i+1}:"), i, 0)
-            servo_layout.addWidget(QLabel(f"{self.servo_labels[i]}:"), i, 0)
+            servo_layout.addWidget(QLabel(f"{label}:"), row, 0)
             
-            # Przyciski presetów (teraz brane z konfiguracji)
+            # Przyciski presetów
             btn_frame = QFrame()
             btn_layout = QHBoxLayout(btn_frame)
             btn_layout.setContentsMargins(0, 0, 0, 0)
             
-            servo_btns = []  # Lista przycisków dla tego serwa
-            for angle in self.servo_presets[i]:
+            servo_btns = []
+            for angle in self.servo_presets[servo_idx]:
                 btn = QPushButton(str(angle))
                 btn.setFixedWidth(60)
-                btn.clicked.connect(lambda _, idx=i, a=angle: self.set_servo_preset(idx, a))
+                btn.clicked.connect(self.create_servo_preset_handler(servo_idx, angle, servo_btns))
                 btn_layout.addWidget(btn)
                 servo_btns.append(btn)
             
-            self.servo_buttons.append(servo_btns)  # Dodaj listę przycisków dla tego serwa
-            servo_layout.addWidget(btn_frame, i, 1)
+            self.servo_buttons.append(servo_btns)
+            servo_layout.addWidget(btn_frame, row, 1)
                         
             # SpinBox dla dowolnej wartości
             spinbox = QSpinBox()
             spinbox.setRange(0, 180)
-            spinbox.setValue(self.basic[i])
+            spinbox.setValue(self.basic[servo_idx])
             spinbox.setFixedWidth(100)
             
             set_btn = QPushButton("Ustaw")
             set_btn.setFixedWidth(150)
-            set_btn.clicked.connect(lambda _, idx=i, sb=spinbox: 
+            set_btn.clicked.connect(lambda _, idx=servo_idx, sb=spinbox: 
                                 self.on_servo_custom_clicked(idx, sb))
             
-            servo_layout.addWidget(spinbox, i, 2)
-            servo_layout.addWidget(set_btn, i, 3)
+            servo_layout.addWidget(spinbox, row, 2)
+            servo_layout.addWidget(set_btn, row, 3)
             
             self.servo_spinboxes.append(spinbox)
 
         servo_group.setLayout(servo_layout)
         right_scroll_layout.addWidget(servo_group)
-
-        
+            
         # Grupa sterowania pompami
         pump_group = QGroupBox("Sterowanie Pompami")
         pump_layout = QGridLayout()
@@ -392,19 +397,31 @@ class ScienceTab(QWidget):
         # Wyślij komendę
         self.set_servo(servo_idx)
 
-    def set_servo_preset(self, index, angle):
-        # Najpierw zresetuj style wszystkich przycisków dla tego serwa
-        for btn in self.servo_buttons[index]:
+    
+    def create_servo_preset_handler(self, servo_idx, angle, buttons):
+        """Tworzy handler dla przycisku presetów z odpowiednim kolorowaniem"""
+        def handler():
+            # Zresetuj style wszystkich przycisków dla tego serwa
+            for btn in buttons:
+                btn.setStyleSheet("")
+            
+            # Podświetl kliknięty przycisk
+            self.sender().setStyleSheet(f"background-color: {config.BUTTON_ON_COLOR};")
+            
+            # Ustaw wartość i wyślij komendę
+            self.servo_spinboxes[servo_idx].setValue(angle)
+            self.set_servo(servo_idx)
+        return handler
+
+    def on_servo_custom_clicked(self, servo_idx, spinbox):
+        """Obsługa niestandardowej wartości z SpinBoxa"""
+        # Zresetuj style wszystkich przycisków presetów dla tego serwa
+        for btn in self.servo_buttons[servo_idx]:
             btn.setStyleSheet("")
         
-        # Znajdź i podświetl przycisk, który został kliknięty
-        for btn in self.servo_buttons[index]:
-            if btn.text() == str(angle):
-                btn.setStyleSheet(f"background-color: {config.BUTTON_ON_COLOR};")
-                break
-    
-        self.servo_spinboxes[index].setValue(angle)
-        self.set_servo(index)
+        # Ustaw i wyślij wartość
+        self.servo_states[servo_idx] = spinbox.value()
+        self.set_servo(servo_idx)
 
     def set_servo_custom(self, index):
         self.set_servo(index)
