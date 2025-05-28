@@ -275,8 +275,8 @@ class ScienceTab(QWidget):
         self.drill_right_button = QPushButton("▶")
         self.drill_left_button.clicked.connect(lambda: self.set_drill_direction("left"))
         self.drill_right_button.clicked.connect(lambda: self.set_drill_direction("right"))
-        self.drill_left_button.setFixedSize(30, 25)  # szerokość, wysokość
-        self.drill_right_button.setFixedSize(30, 25)
+        self.drill_left_button.setFixedSize(50, 25)  # szerokość, wysokość
+        self.drill_right_button.setFixedSize(50, 25)
 
         control_layout.addWidget(self.drill_left_button, 2, 1)
         control_layout.addWidget(self.drill_right_button, 2, 2)
