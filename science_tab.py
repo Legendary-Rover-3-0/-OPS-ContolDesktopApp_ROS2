@@ -164,12 +164,12 @@ class ScienceTab(QWidget):
         # Grupa sterowania serwami
         # Zmieniamy kolejność serw zgodnie z oczekiwaniami
         self.servo_display_order = [
-            ("Pojemnik kwadratowy prawy", 3),
+            ("Pojemnik kwadratowy prawy", 2),
             ("Rewolwer prawy", 4),
             ("Pojemnik prawy", 5),
-            ("Pojemnik kwadratowy lewy", 0),
-            ("Rewolwer lewy", 1),
-            ("Pojemnik lewy", 2)
+            ("Pojemnik kwadratowy lewy", 1),
+            ("Rewolwer lewy", 3),
+            ("Pojemnik lewy", 0)
         ]
 
         # Grupa sterowania serwami
