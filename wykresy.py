@@ -15,6 +15,7 @@ class PlotApp(QWidget):
         self.init_ui()
         self.setWindowTitle("Science Data Visualizer")
         self.setGeometry(100, 100, 1200, 800)
+        self.time = 2
 
     def init_ui(self):
         main_layout = QVBoxLayout()
@@ -68,6 +69,24 @@ class PlotApp(QWidget):
         # Pierwsze ładowanie danych
         self.refresh_all_plots()
 
+    def find_newest_timestamp(self, filename):
+        """Znajdź najnowszy timestamp w pliku"""
+        newest = None
+        try:
+            with open(os.path.join(self.data_directory, filename), "r") as f:
+                for line in f:
+                    parts = line.strip().split(", ")
+                    if len(parts) >= 2:
+                        try:
+                            timestamp = datetime.datetime.strptime(parts[0], "%Y-%m-%d %H:%M:%S")
+                            if newest is None or timestamp > newest:
+                                newest = timestamp
+                        except ValueError:
+                            continue
+        except FileNotFoundError:
+            pass
+        return newest
+
     def apply_settings(self):
         """Zastosuj ustawienia po kliknięciu przycisku Zaakceptuj"""
         self.max_readings = self.readings_spinbox.value()
@@ -86,8 +105,13 @@ class PlotApp(QWidget):
     def load_data_from_file(self, filename):
         timestamps = []
         values = []
-        now = datetime.datetime.now()
-        one_hour_ago = now - datetime.timedelta(hours=1)
+        
+        # Znajdź najnowszy timestamp w pliku
+        newest_timestamp = self.find_newest_timestamp(filename)
+        if newest_timestamp is None:
+            return timestamps, values
+        
+        one_hour_before_newest = newest_timestamp - datetime.timedelta(hours=1)  ##TU ZMIENIĆ 
         
         try:
             with open(os.path.join(self.data_directory, filename), "r") as f:
@@ -103,8 +127,8 @@ class PlotApp(QWidget):
                         try:
                             timestamp = datetime.datetime.strptime(parts[0], "%Y-%m-%d %H:%M:%S")
                             
-                            # Pomijaj dane starsze niż godzina
-                            if timestamp < one_hour_ago:
+                            # Pomijaj dane starsze niż godzina przed najnowszym timestampem
+                            if timestamp < one_hour_before_newest:
                                 continue
                                 
                             # Dla plików z wieloma wartościami (CO2, metan)
@@ -141,6 +165,12 @@ class PlotApp(QWidget):
             tab.canvas.draw()
             return
         
+        newest_timestamp = self.find_newest_timestamp(filename)
+        if newest_timestamp:
+            time_range = f"from {(newest_timestamp - datetime.timedelta(hours=1)):%H:%M} to {newest_timestamp:%H:%M}" ##TU ZMIENIĆ 
+        else:
+            time_range = "last hour"
+        
         colors = ['b', 'g', 'r', 'c', 'm', 'y']
         labels = ['Sensor1', 'Sensor 2']  # Domyślne etykiety
         
@@ -163,7 +193,7 @@ class PlotApp(QWidget):
         ax.xaxis.set_major_locator(mdates.AutoDateLocator())
         
         ax.set_ylabel(ylabel)
-        ax.set_title(f"{tab.title} (last {len(timestamps[0])} readings)")
+        ax.set_title(f"{tab.title} ({time_range}, last {len(timestamps[0])} readings)")
         ax.legend(loc='upper right')
         ax.grid(True, linestyle='--', alpha=0.7)
         tab.figure.autofmt_xdate()

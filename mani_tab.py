@@ -1,11 +1,12 @@
 import threading
 import time
 import pygame
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QGroupBox, QGridLayout
-from PyQt6.QtWidgets import (QTextEdit, QScrollArea, QFrame)
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, 
+                            QGroupBox, QGridLayout, QTextEdit, QScrollArea, 
+                            QFrame, QPushButton)
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
-from std_msgs.msg import String, Float32  # Dodano Float32 dla temperatury
+from std_msgs.msg import String, Float32
 from geometry_msgs.msg import Twist
 import config
 
@@ -30,6 +31,14 @@ class ManipulatorTab(QWidget):
         # Inicjalizacja danych temperatury
         self.cpu_temp = 0.0
         self.gpu_temp = 0.0
+        
+        # Definicja presetów czułości
+        self.sensitivity_presets = [
+            ["Kuba", 100, 100, 100, 100, 80, 80],
+            ["Ustaw", 50, 50, 50, 50, 50, 50],
+            ["Sobie", 80, 80, 80, 60, 60, 60],
+            ["To", 30, 70, 30, 70, 30, 70]
+        ]
 
         self.init_ui()
         self.init_ros_publishers()
@@ -68,6 +77,19 @@ class ManipulatorTab(QWidget):
         global_sens_layout.addWidget(self.global_sens_value_label)
         global_sens_group.setLayout(global_sens_layout)
         main_layout.addWidget(global_sens_group)
+
+        # Sekcja presetów czułości
+        presets_group = QGroupBox("Presety czułości")
+        presets_layout = QHBoxLayout()
+        
+        for preset in self.sensitivity_presets:
+            btn = QPushButton(preset[0])
+            btn.setToolTip(" | ".join(f"{val}" for val in preset[1:]))
+            btn.clicked.connect(lambda _, p=preset: self.apply_preset(p))
+            presets_layout.addWidget(btn)
+        
+        presets_group.setLayout(presets_layout)
+        main_layout.addWidget(presets_group)
 
         # Kolumna dla manipulatora
         self.mani_group = QGroupBox("Manipulator Control")
@@ -179,7 +201,55 @@ class ManipulatorTab(QWidget):
             QWidget {
                 background-color: #333;
             }
+            QPushButton {
+                background-color: #555;
+                color: #ddd;
+                border: 1px solid #666;
+                border-radius: 4px;
+                padding: 5px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #666;
+            }
+            QPushButton:pressed {
+                background-color: #777;
+            }
         """)
+
+    def apply_preset(self, preset):
+        """Stosuje wybrany preset czułości"""
+        preset_name = preset[0]
+        sensitivity_values = preset[1:]
+        
+        for i, value in enumerate(sensitivity_values):
+            if i < len(self.sensitivity_sliders):
+                self.sensitivity_sliders[i].setValue(value)
+                self.sensitivities[i] = float(value)
+
+    def add_new_preset(self):
+        """Dodaje nowy preset na podstawie aktualnych ustawień"""
+        # Tutaj można dodać dialog do wprowadzenia nazwy nowego presetu
+        # Na razie używamy domyślnej nazwy
+        preset_name = f"Custom {len(self.sensitivity_presets) + 1}"
+        new_preset = [preset_name] + [int(slider.value()) for slider in self.sensitivity_sliders]
+        
+        self.sensitivity_presets.append(new_preset)
+        
+        # Dodaj nowy przycisk
+        btn = QPushButton(preset_name)
+        btn.setToolTip(" | ".join(f"{val}" for val in new_preset[1:]))
+        btn.clicked.connect(lambda _, p=new_preset: self.apply_preset(p))
+        
+        # Znajdź layout z przyciskami presetów
+        presets_group = self.findChild(QGroupBox, "Presety czułości")
+        if presets_group:
+            layout = presets_group.layout()
+            # Wstaw nowy przycisk przed przyciskiem "+"
+            layout.insertWidget(layout.count() - 1, btn)
+            
+            self.node.get_logger().info(f"Added new preset: {new_preset}")
+
 
     def init_ros_publishers(self):
         self.publisher = self.node.create_publisher(Twist, "/array_topic", 10)
