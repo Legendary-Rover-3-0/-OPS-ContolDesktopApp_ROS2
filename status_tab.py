@@ -264,12 +264,15 @@ class StatusTab(QWidget):
 
     def get_ports(self):
         #self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyS\* -o -name ttyUSB\* -o -name ttyA\* \)'")
-        self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyUSB\* -o -name ttyAC\* \)'")
+        # self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyUSB\* -o -name ttyAC\* \)'")
+        self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '/home/legendary/kubatk/list_ports_jetson.py'")
 
     def start_screen(self, name_scrypt):
         selected = self.port_list.currentItem()
+        selected = selected.text().split(" ")
+        selected = selected[0]
         if selected:
-            self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS {selected.text().replace('/dev/', '')} {name_scrypt} {selected.text()}'", callback=self.view_screens)
+            self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS {selected.replace('/dev/', '')} {name_scrypt} {selected}'", callback=self.view_screens)
 
     def view_screens(self):
         self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -ls'")
@@ -288,9 +291,11 @@ class StatusTab(QWidget):
 
     def start_gps_callback(self):
         selected = self.port_list.currentItem()
+        selected = selected.text().split(" ")
+        selected = selected[0]
         if selected:
             self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected.text().replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected.text()}'"
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected.replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected}'"
             )
             self.run_ansible(
                 f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_magnetometr {config.START_MAGNETOMETR}'"
@@ -302,9 +307,11 @@ class StatusTab(QWidget):
 
     def start_satel_callback(self):
         selected = self.port_list.currentItem()
+        selected = selected.text().split(" ")
+        selected = selected[0]
         if selected:
             self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS SATEL_{selected.text().replace('/dev/', '')} {config.START_SATEL_DECODER} {selected.text()}'",
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS SATEL_{selected.replace('/dev/', '')} {config.START_SATEL_DECODER} {selected}'",
                 callback=self.view_screens
             )
 
