@@ -172,12 +172,12 @@ class ScienceTab(QWidget):
             ("Pojemnik lewy", 0)
         ]
 
-        # Grupa sterowania serwami
+            # Grupa sterowania serwami
         servo_group = QGroupBox("Sterowanie Serwomechanizmami")
         servo_layout = QGridLayout()
 
         self.servo_buttons = []  # Przechowuje przyciski presetów
-        self.servo_spinboxes = []  # Przechowuje spinboxy
+        self.servo_spinboxes = [None] * 6  # Inicjalizacja listy z odpowiednią długością
 
         for row, (label, servo_idx) in enumerate(self.servo_display_order):
             # Etykieta serwa
@@ -213,11 +213,12 @@ class ScienceTab(QWidget):
             servo_layout.addWidget(spinbox, row, 2)
             servo_layout.addWidget(set_btn, row, 3)
             
-            self.servo_spinboxes.append(spinbox)
+            # Zapisz spinbox pod właściwym indeksem fizycznym
+            self.servo_spinboxes[servo_idx] = spinbox
 
         servo_group.setLayout(servo_layout)
         right_scroll_layout.addWidget(servo_group)
-            
+                
         # Grupa sterowania pompami
         pump_group = QGroupBox("Sterowanie Pompami")
         pump_layout = QGridLayout()
