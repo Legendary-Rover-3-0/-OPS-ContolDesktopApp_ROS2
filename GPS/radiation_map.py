@@ -57,7 +57,7 @@ class RadiationMapNode(Node):
             cursor.execute('SELECT latitude, longitude FROM radiation')
             rows = cursor.fetchall()
             for lat, lon in rows:
-                if geodesic((lat, lon), (self.latest_lat, self.latest_lon)).meters < 10:
+                if geodesic((lat, lon), (self.latest_lat, self.latest_lon)).meters < 2:
                     cursor.execute('''
                         UPDATE radiation SET radiation = ?, timestamp = ?
                         WHERE latitude = ? AND longitude = ?
@@ -74,7 +74,10 @@ class RadiationMapNode(Node):
             conn.close()
 
 def get_color_for_value(value, min_val=0.0, max_val=2.0):
-    ratio = min(max((value - min_val) / (max_val - min_val), 0.0), 1.0)
+    if min_val == max_val:
+        ratio = 0.5  # lub 0.0 / 1.0 w zależności od tego, jak chcesz potraktować brak zakresu
+    else:
+        ratio = min(max((value - min_val) / (max_val - min_val), 0.0), 1.0)
     if ratio < 0.5:
         r = int(255 * (ratio * 2))
         g = 255
@@ -166,39 +169,39 @@ def main():
     icon_cache = {}
 
     def load_radiation_from_db():
-        try:
-            conn = sqlite3.connect('GPS/radiation_data.db')
-            cursor = conn.cursor()
-            cursor.execute('SELECT latitude, longitude, radiation FROM radiation')
-            rows = cursor.fetchall()
-            conn.close()
+        # try:
+        conn = sqlite3.connect('GPS/radiation_data.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT latitude, longitude, radiation FROM radiation')
+        rows = cursor.fetchall()
+        conn.close()
 
-            if not rows:
-                root.after(1000, load_radiation_from_db)
-                return
+        if not rows:
+            root.after(1000, load_radiation_from_db)
+            return
 
-            values = [r[2] for r in rows]
-            min_val, max_val = min(values), max(values)
+        values = [r[2] for r in rows]
+        min_val, max_val = min(values), max(values)
 
-            legend_photo = create_radiation_legend(min_val, max_val)
-            legend_label = tk.Label(root, image=legend_photo, bg="#f0f0f0")
-            legend_label.image = legend_photo
-            legend_label.grid(row=0, column=0, sticky="w", padx=10, pady=5)
+        legend_photo = create_radiation_legend(min_val, max_val)
+        legend_label = tk.Label(root, image=legend_photo, bg="#f0f0f0")
+        legend_label.image = legend_photo
+        legend_label.grid(row=0, column=0, sticky="w", padx=10, pady=5)
 
-            map_widget.delete_all_marker()
-            map_widget.set_marker(rover_coords['x'], rover_coords['y'], text="Rover", icon=icon)
-            load_targets_from_db(map_widget)
+        map_widget.delete_all_marker()
+        map_widget.set_marker(rover_coords['x'], rover_coords['y'], text="Rover", icon=icon)
+        load_targets_from_db(map_widget)
 
-            for lat, lon, value in rows:
-                rounded_value = round(value, 2)
-                if rounded_value not in icon_cache:
-                    color = get_color_for_value(rounded_value, min_val, max_val)
-                    icon_cache[rounded_value] = generate_colored_dot(color)
-                icon_img = icon_cache[rounded_value]
-                label = f"{rounded_value:.2f}" if show_labels_var.get() else ""
-                map_widget.set_marker(lat, lon, text=label, icon=icon_img)
-        except Exception as e:
-            print(f"Błąd: {e}")
+        for lat, lon, value in rows:
+            rounded_value = round(value, 2)
+            if rounded_value not in icon_cache:
+                color = get_color_for_value(rounded_value, min_val, max_val)
+                icon_cache[rounded_value] = generate_colored_dot(color)
+            icon_img = icon_cache[rounded_value]
+            label = f"{rounded_value:.2f}" if show_labels_var.get() else ""
+            map_widget.set_marker(lat, lon, text=label, icon=icon_img)
+        # except Exception as e:
+            # print(f"Błąd: {e}")
 
         root.after(1000, load_radiation_from_db)
 
