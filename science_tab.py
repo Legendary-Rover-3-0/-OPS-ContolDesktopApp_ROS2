@@ -73,10 +73,10 @@ class ScienceTab(QWidget):
         left_scroll_layout.setContentsMargins(5, 5, 5, 5)
         
         # Ramka CO₂
-        co2_frame = QGroupBox("Stężenie CO₂")
+        co2_frame = QGroupBox("Concentration of CO₂")
         co2_layout = QVBoxLayout()
-        self.co2_label1 = QLabel("Czujnik 1: --- ppm")
-        self.co2_label2 = QLabel("Czujnik 2: --- ppm")
+        self.co2_label1 = QLabel("Sensor 1: --- ppm")
+        self.co2_label2 = QLabel("Sensor 2: --- ppm")
         self.co2_label1.setFont(QFont('Arial', 12))
         self.co2_label2.setFont(QFont('Arial', 12))
         co2_layout.addWidget(self.co2_label1)
@@ -85,10 +85,10 @@ class ScienceTab(QWidget):
         left_scroll_layout.addWidget(co2_frame)
 
         # Ramka Metan
-        methane_frame = QGroupBox("Stężenie Metanu")
+        methane_frame = QGroupBox("Concentration of Metan")
         methane_layout = QVBoxLayout()
-        self.methane_label1 = QLabel("Czujnik 1: --- ppm")
-        self.methane_label2 = QLabel("Czujnik 2: --- ppm")
+        self.methane_label1 = QLabel("Sensor 1: --- ppm")
+        self.methane_label2 = QLabel("Sensor 2: --- ppm")
         self.methane_label1.setFont(QFont('Arial', 12))
         self.methane_label2.setFont(QFont('Arial', 12))
         methane_layout.addWidget(self.methane_label1)
@@ -97,7 +97,7 @@ class ScienceTab(QWidget):
         left_scroll_layout.addWidget(methane_frame)
 
         # Ramka Temperatura gleby
-        temp_frame = QGroupBox("Temperatura gleby")
+        temp_frame = QGroupBox("Soil temperature")
         temp_layout = QVBoxLayout()
         self.temp_label = QLabel("--- °C")
         self.temp_label.setFont(QFont('Arial', 12))
@@ -106,7 +106,7 @@ class ScienceTab(QWidget):
         left_scroll_layout.addWidget(temp_frame)
 
         # Ramka Wilgotność gleby
-        humidity_frame = QGroupBox("Wilgotność gleby")
+        humidity_frame = QGroupBox("Soil moisture")
         humidity_layout = QVBoxLayout()
         self.humidity_label = QLabel("--- %")
         self.humidity_label.setFont(QFont('Arial', 12))
@@ -115,9 +115,9 @@ class ScienceTab(QWidget):
         left_scroll_layout.addWidget(humidity_frame)
 
         # Ramka Promieniowanie
-        radiation_frame = QGroupBox("Promieniowanie")
+        radiation_frame = QGroupBox("Radiation")
         radiation_layout = QVBoxLayout()
-        self.radiation_label = QLabel("--- uSv/h")
+        self.radiation_label = QLabel("--- mSv/h")
         self.radiation_label.setFont(QFont('Arial', 12))
         radiation_layout.addWidget(self.radiation_label)
         radiation_frame.setLayout(radiation_layout)
@@ -152,7 +152,7 @@ class ScienceTab(QWidget):
         # Prawa kolumna - Sterowanie
         right_column = QVBoxLayout()
         right_column.setSpacing(10)
-        
+
         # Kontener z przewijaniem dla prawej kolumny
         right_scroll = QScrollArea()
         right_scroll.setWidgetResizable(True)
@@ -160,7 +160,7 @@ class ScienceTab(QWidget):
         right_scroll_layout = QVBoxLayout(right_scroll_content)
         right_scroll_layout.setSpacing(10)
         right_scroll_layout.setContentsMargins(5, 5, 5, 5)
-        
+
         # Grupa sterowania serwami
         servo_group = QGroupBox("Sterowanie Serwomechanizmami")
         servo_layout = QGridLayout()
@@ -170,6 +170,8 @@ class ScienceTab(QWidget):
         self.servo_labels = ["Pojemnik lewy", "Pojemnik kwadratowy lewy",
                              "Pojemnik kwadratowy prawy", "Rewolwer lewy",
                              "Rewolwer prawy", "Pojemnik prawy"]  # Przechowuje etykiety serw
+        self.servo_buttons = []  # Będzie to lista list - 6 serw, każdy z listą swoich przycisków
+
         for i in range(6):
             # Etykieta serwa
             #servo_layout.addWidget(QLabel(f"Serwo {i+1}:"), i, 0)
@@ -180,23 +182,27 @@ class ScienceTab(QWidget):
             btn_layout = QHBoxLayout(btn_frame)
             btn_layout.setContentsMargins(0, 0, 0, 0)
             
-            for angle in self.servo_presets[i]:  # Używamy presetów dla danego serwa
+            servo_btns = []  # Lista przycisków dla tego serwa
+            for angle in self.servo_presets[i]:
                 btn = QPushButton(str(angle))
                 btn.setFixedWidth(60)
                 btn.clicked.connect(lambda _, idx=i, a=angle: self.set_servo_preset(idx, a))
                 btn_layout.addWidget(btn)
-                self.servo_buttons.append(btn)
+                servo_btns.append(btn)
             
+            self.servo_buttons.append(servo_btns)  # Dodaj listę przycisków dla tego serwa
             servo_layout.addWidget(btn_frame, i, 1)
-            
+                        
             # SpinBox dla dowolnej wartości
             spinbox = QSpinBox()
             spinbox.setRange(0, 180)
             spinbox.setValue(self.basic[i])
             spinbox.setFixedWidth(100)
+            
             set_btn = QPushButton("Ustaw")
             set_btn.setFixedWidth(150)
-            set_btn.clicked.connect(lambda _, idx=i: self.set_servo_custom(idx))
+            set_btn.clicked.connect(lambda _, idx=i, sb=spinbox: 
+                                self.on_servo_custom_clicked(idx, sb))
             
             servo_layout.addWidget(spinbox, i, 2)
             servo_layout.addWidget(set_btn, i, 3)
@@ -205,6 +211,7 @@ class ScienceTab(QWidget):
 
         servo_group.setLayout(servo_layout)
         right_scroll_layout.addWidget(servo_group)
+
         
         # Grupa sterowania pompami
         pump_group = QGroupBox("Sterowanie Pompami")
@@ -336,8 +343,8 @@ class ScienceTab(QWidget):
 
     def co2_callback(self, msg):
         if len(msg.data) >= 2:
-            self.co2_label1.setText(f"Czujnik 1: {msg.data[0]:.1f} ppm")
-            self.co2_label2.setText(f"Czujnik 2: {msg.data[1]:.1f} ppm")
+            self.co2_label1.setText(f"Senor 1: {msg.data[0]:.1f} ppm")
+            self.co2_label2.setText(f"Sensor 2: {msg.data[1]:.1f} ppm")
             
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open(f"{self.data_directory}/co2.txt", "a") as f:
@@ -345,8 +352,8 @@ class ScienceTab(QWidget):
 
     def methane_callback(self, msg):
         if len(msg.data) >= 2:
-            self.methane_label1.setText(f"Czujnik 1: {msg.data[0]:.2f} ppm")
-            self.methane_label2.setText(f"Czujnik 2: {msg.data[1]:.2f} ppm")
+            self.methane_label1.setText(f"Sensor 1: {msg.data[0]:.2f} ppm")
+            self.methane_label2.setText(f"Sensor 2: {msg.data[1]:.2f} ppm")
             
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with open(f"{self.data_directory}/methane.txt", "a") as f:
@@ -370,13 +377,32 @@ class ScienceTab(QWidget):
 
     def radiation_callback(self, msg):
         radiation_value = msg.data
-        self.radiation_label.setText(f"{radiation_value:.1f} uSv/h")
+        self.radiation_label.setText(f"{radiation_value:.1f} mSv/h")
         
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(f"{self.data_directory}/radiation.txt", "a") as f:
             f.write(f"{timestamp}, {radiation_value:.1f}\n")
 
+
+    def on_servo_custom_clicked(self, servo_idx, spinbox):
+        # Zresetuj style wszystkich przycisków presetów dla tego serwa
+        for btn in self.servo_buttons[servo_idx]:
+            btn.setStyleSheet("")
+        
+        # Wyślij komendę
+        self.set_servo(servo_idx)
+
     def set_servo_preset(self, index, angle):
+        # Najpierw zresetuj style wszystkich przycisków dla tego serwa
+        for btn in self.servo_buttons[index]:
+            btn.setStyleSheet("")
+        
+        # Znajdź i podświetl przycisk, który został kliknięty
+        for btn in self.servo_buttons[index]:
+            if btn.text() == str(angle):
+                btn.setStyleSheet(f"background-color: {config.BUTTON_ON_COLOR};")
+                break
+    
         self.servo_spinboxes[index].setValue(angle)
         self.set_servo(index)
 

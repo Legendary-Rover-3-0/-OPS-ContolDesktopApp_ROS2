@@ -55,11 +55,11 @@ class PlotApp(QWidget):
         self.humidity_tab = QWidget()
         self.radiation_tab = QWidget()
         
-        self.tabs.addTab(self.create_plot_tab(self.co2_tab, "CO₂"), "CO₂ [ppm]")
-        self.tabs.addTab(self.create_plot_tab(self.methane_tab, "Metan"), "Metan [ppm]")
-        self.tabs.addTab(self.create_plot_tab(self.temp_tab, "Temperatura"), "Temp. [°C]")
-        self.tabs.addTab(self.create_plot_tab(self.humidity_tab, "Wilgotność"), "Wilgotność [%]")
-        self.tabs.addTab(self.create_plot_tab(self.radiation_tab, "Promieniowanie"), "Promien. [CPM]")
+        self.tabs.addTab(self.create_plot_tab(self.co2_tab, "Concentration of CO₂"), "CO₂ [ppm]")
+        self.tabs.addTab(self.create_plot_tab(self.methane_tab, "Concentration of Metan"), "Metan [ppm]")
+        self.tabs.addTab(self.create_plot_tab(self.temp_tab, "Soil temperature"), "Temp. [°C]")
+        self.tabs.addTab(self.create_plot_tab(self.humidity_tab, "Soil moisture"), "Moisture [%]")
+        self.tabs.addTab(self.create_plot_tab(self.radiation_tab, "Radiation"), "Radiation [mSv/h]")
         
         main_layout.addWidget(control_group)
         main_layout.addWidget(self.tabs)
@@ -142,7 +142,7 @@ class PlotApp(QWidget):
             return
         
         colors = ['b', 'g', 'r', 'c', 'm', 'y']
-        labels = ['Czujnik 1', 'Czujnik 2']  # Domyślne etykiety
+        labels = ['Sensor1', 'Sensor 2']  # Domyślne etykiety
         
         for i in range(len(timestamps)):
             if i < len(labels):
@@ -163,7 +163,7 @@ class PlotApp(QWidget):
         ax.xaxis.set_major_locator(mdates.AutoDateLocator())
         
         ax.set_ylabel(ylabel)
-        ax.set_title(f"{tab.title} (ostatnie {len(timestamps[0])} odczytów)")
+        ax.set_title(f"{tab.title} (last {len(timestamps[0])} readings)")
         ax.legend(loc='upper right')
         ax.grid(True, linestyle='--', alpha=0.7)
         tab.figure.autofmt_xdate()
@@ -174,9 +174,9 @@ class PlotApp(QWidget):
         plot_config = [
             (self.co2_tab, "co2.txt", "CO₂ [ppm]"),
             (self.methane_tab, "methane.txt", "Metan [ppm]"),
-            (self.temp_tab, "soil_temp.txt", "Temperatura [°C]"),
-            (self.humidity_tab, "soil_humidity.txt", "Wilgotność [%]"),
-            (self.radiation_tab, "radiation.txt", "Promieniowanie [CPM]")
+            (self.temp_tab, "soil_temp.txt", "Temp. [°C]"),
+            (self.humidity_tab, "soil_humidity.txt", "Moisture [%]"),
+            (self.radiation_tab, "radiation.txt", "Radiation [mSv/h]")
         ]
         
         for tab, filename, ylabel in plot_config:
