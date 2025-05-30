@@ -6,6 +6,9 @@ import serial.tools.list_ports
 import threading
 from std_msgs.msg import Int8MultiArray, Int32MultiArray, Int16
 import argparse
+import struct
+from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Float32
 
 debug = True
 prevent_ROS = False
@@ -21,6 +24,11 @@ class SerialReceiverNode(Node):
         self.science_servo_publisher = self.create_publisher(Int32MultiArray, '/servos_urc_control', 10)
         self.science_pump_publisher = self.create_publisher(Int8MultiArray, '/pumps_urc_control', 10)
         self.science_led_publisher = self.create_publisher(Int16, '/led_urc_control', 10)
+
+        # GPS i heading wysylanie
+        self.create_subscription(NavSatFix, '/gps/fix', self.gps_callback, 10)
+        self.create_subscription(Float32, '/heading', self.heading_callback, 10)
+
 
         try:
 
@@ -218,7 +226,38 @@ ang_x={angular_x:.2f}, ang_y={angular_y:.2f}, ang_z={angular_z:.2f}")
 
     def byte_to_float(self, b):
         return (b - 128) / 127.0
+    
+    def send_serial_frame(self, mark: str, payload: bytes):
+        checksum = sum(payload) % 256
+        frame = bytearray()
+        frame.extend(b"$")
+        frame.extend(mark.encode("utf-8"))
+        frame.extend(payload)
+        frame.append(checksum)
+        frame.extend(b"#")
+        try:
+            self.serial_port.write(frame)
+            if debug: self.get_logger().info(f"Wysłano ramkę {mark}: {frame}")
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas wysyłania ramki {mark}: {e}")
+    
+    def gps_callback(self, msg: NavSatFix):
+        try:
+            lat_bytes = struct.pack('<f', float(msg.latitude))
+            lon_bytes = struct.pack('<f', float(msg.longitude))
+            alt_bytes = struct.pack('<f', float(msg.altitude))
+            payload = lat_bytes + lon_bytes + alt_bytes
+            self.send_serial_frame("GP", payload)
+        except Exception as e:
+            self.get_logger().error(f"Błąd GPS callback: {e}")
 
+            
+    def heading_callback(self, msg: Float32):
+        try:
+            heading_bytes = struct.pack('<f', msg.data)
+            self.send_serial_frame("HD", heading_bytes)
+        except Exception as e:
+            self.get_logger().error(f"Błąd Heading callback: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description='Serial receiver node')

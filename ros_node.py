@@ -8,6 +8,11 @@ import cv2
 import numpy as np
 import serial
 
+from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Float32
+import threading
+import struct
+
 
 class ROSNode(Node):
     def __init__(self):
@@ -15,10 +20,15 @@ class ROSNode(Node):
         super().__init__('ros_node')
         self.gamepad_publisher = self.create_publisher(Joy, 'gamepad_input', 10)
         self.button_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/led_state_topic', 10)
-        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10) 
+        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10)
+
+        self.gps_fix_pub = self.create_publisher(NavSatFix, '/gps/fix', 10)
+        self.heading_pub = self.create_publisher(Float32, '/heading', 10)
 
         self.communication_mode = 'ROS2' #ROS2 lub SATEL
         self.serial_port = None
+        self.serial_thread = None
+
         
         # self.camera_subscriptions = []
         # self.update_image_callback = update_image_callback
@@ -131,29 +141,81 @@ class ROSNode(Node):
                 frame.append(byte)
             frame.append(checksum)
             frame.extend(b"#")
-            print(frame)
+            # print(frame)
 
             bit_string = ' '.join(f'{byte:08b}' for byte in frame)
-            print(bit_string)
+            # print(bit_string)
 
             self.serial_port.write(frame)
 
         except Exception as e:
             print(f"Błąd przy wysyłaniu ramki szeregowej: {e}")
-    # def add_camera_subscription(self, topic, qos_profile):
-    #     subscription = self.create_subscription(
-    #         CompressedImage,  # Zmiana z Image na CompressedImage
-    #         topic,
-    #         lambda msg, idx=len(self.camera_subscriptions): self.camera_callback(msg, idx),
-    #         10)
-    #     self.camera_subscriptions.append(subscription)
+    
+    def start_serial_thread(self):
+        if self.serial_port is not None and self.communication_mode == 'SATEL':
+            self.serial_thread = threading.Thread(target=self.serial_read_loop, daemon=True)
+            self.serial_thread.start()
+            self.get_logger().info("Wątek odbioru danych SATEL został uruchomiony.")
 
-    # def camera_callback(self, msg, idx):
-    #     try:
-    #         # Dekodowanie skompresowanego obrazu
-    #         np_arr = np.frombuffer(msg.data, np.uint8)
-    #         cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-    #         if cv_image is not None:
-    #             self.update_image_callback(cv_image, idx)
-    #     except Exception as e:
-    #         self.get_logger().error(f"Błąd dekodowania obrazu: {e}")
+    def stop_serial_thread(self):
+        self.serial_thread = None  # tylko wyczyść — thread i tak się zakończy przez rclpy.ok() i brak komunikacji
+
+    def serial_read_loop(self):
+        buffer = bytearray()
+        while self.serial_thread is not None and rclpy.ok():
+            try:
+                if self.communication_mode != 'SATEL':
+                    continue
+                byte = self.serial_port.read(1)
+                if not byte:
+                    continue
+                buffer.extend(byte)
+
+                while True:
+                    start_idx = buffer.find(b"$")
+                    end_idx = buffer.find(b"#", start_idx + 1)
+                    if start_idx == -1 or end_idx == -1:
+                        break
+                    frame = buffer[start_idx + 1:end_idx]
+                    del buffer[:end_idx + 1]
+                    self.handle_serial_frame(frame)
+            except Exception as e:
+                self.get_logger().error(f"Błąd odczytu z portu szeregowego: {e}")
+
+    def handle_serial_frame(self, frame: bytearray):
+        try:
+            if len(frame) < 3:
+                return
+
+            header = frame[0:2]
+
+            if header == b'GP' and len(frame) == 15:
+                lat, lon, alt = struct.unpack('<fff', frame[2:14])
+                checksum = frame[14]
+                if (sum(frame[2:14]) % 256) != checksum:
+                    self.get_logger().warn("GPS: Nieprawidłowa suma kontrolna.")
+                    return
+                msg = NavSatFix()
+                msg.latitude = lat
+                msg.longitude = lon
+                msg.altitude = alt
+                self.gps_fix_pub.publish(msg)
+                # self.get_logger().info(f"Odebrano GP: lat={lat}, lon={lon}, alt={alt}")
+
+            elif header == b'HD' and len(frame) == 7:
+                (heading,) = struct.unpack('<f', frame[2:6])
+                checksum = frame[6]
+                if (sum(frame[2:6]) % 256) != checksum:
+                    self.get_logger().warn("Heading: Nieprawidłowa suma kontrolna.")
+                    return
+                msg = Float32()
+                msg.data = heading
+                self.heading_pub.publish(msg)
+                # self.get_logger().info(f"Odebrano HD: heading={heading:.2f}")
+
+            # Możesz dodać inne typy ramek tutaj
+
+        except Exception as e:
+            self.get_logger().error(f"Błąd przetwarzania ramki: {e}")
+
+
