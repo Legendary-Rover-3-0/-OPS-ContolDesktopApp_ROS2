@@ -124,23 +124,19 @@ class MainWindow(QMainWindow):
         self.camera_windows = [None] * 4
 
     def connect_satel(self):
-        """Ustaw lub rozłącz port szeregowy"""
-        if self.ros_node.serial_port is not None:
-            # Rozłącz
-            self.ros_node.stop_serial_thread()
-            self.ros_node.serial_port.close()
-            self.ros_node.serial_port = None
+        """Ustaw nowy port szeregowy"""
 
+        if self.ros_node.serial_port is not None:
+            # disconnect
+            self.ros_node.serial_port = None
             self.control_tab.style_button(self.control_tab.connect_serial_button, config.BUTTON_DEFAULT_COLOR)
             self.control_tab.connect_serial_button.setText("Connect")
-
             if self.ros_node.communication_mode == 'SATEL':
                 self.toggle_communication_callback()
 
-            print("Rozłączono port.")
+            print(f"Rozczono port.")
             return
 
-        # Połączenie
 
         selected_port = self.control_tab.serial_port_selector.currentText()
         try:
@@ -173,7 +169,6 @@ class MainWindow(QMainWindow):
 
         if self.ros_node.communication_mode == "ROS2" and self.ros_node.serial_port is not None:
             self.ros_node.communication_mode = "SATEL"
-            self.ros_node.start_serial_thread()
             self.control_tab.style_button(self.control_tab.communication_button, config.BUTTON_SELECTED_COLOR)
 
         elif self.ros_node.communication_mode == "SATEL":
