@@ -131,10 +131,10 @@ class ROSNode(Node):
                 frame.append(byte)
             frame.append(checksum)
             frame.extend(b"#")
-            print(frame)
+            # print(frame)
 
             bit_string = ' '.join(f'{byte:08b}' for byte in frame)
-            print(bit_string)
+            # print(bit_string)
 
             self.serial_port.write(frame)
 

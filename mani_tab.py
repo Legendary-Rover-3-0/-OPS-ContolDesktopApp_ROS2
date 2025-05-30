@@ -331,15 +331,15 @@ class ManipulatorTab(QWidget):
 
             # Sprawdzanie osi X
             if hat[0] == 1:  
-                new_values[3] += self.sensitivities[2]
+                new_values[3] += self.sensitivities[3]
             elif hat[0] == -1:  
-                new_values[3] -= self.sensitivities[2]
+                new_values[3] -= self.sensitivities[3]
 
             # Sprawdzanie osi Y
             if hat[1] == 1:  
-                new_values[5] += self.sensitivities[1]
+                new_values[5] += self.sensitivities[5]
             elif hat[1] == -1:  
-                new_values[5] -= self.sensitivities[1]
+                new_values[5] -= self.sensitivities[5]
 
             # Ograniczenie zakresu wartości
             for i in range(6):
