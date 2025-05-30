@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox, 
-    QLineEdit, QLabel, QFrame, QGridLayout, QScrollArea, QTextEdit
+    QLineEdit, QLabel, QFrame, QGridLayout, QTextEdit
 )
-from PyQt6.QtGui import QFont, QPalette, QColor, QTextCursor, QTextCharFormat, QTextFormat, QKeyEvent
-from PyQt6.QtCore import QProcess, Qt, pyqtSignal
+from PyQt6.QtGui import QFont, QColor, QTextCursor, QTextCharFormat, QKeyEvent
+from PyQt6.QtCore import Qt, QTimer
 from rclpy.node import Node
 from std_msgs.msg import String
 import re
@@ -13,9 +13,15 @@ class KeyboardTab(QWidget):
     def __init__(self, node: Node):
         super().__init__()
         self.node = node
-        self.capslock = False
         self.log_history = []
-        self.keyboard_publisher = self.node.create_publisher(String, '/keyboard', 10)
+
+        # Publishers for the different topics
+        self.set_key_publisher = self.node.create_publisher(String, '/KPEN/set_key_topic', 10)
+        self.command_publisher = self.node.create_publisher(String, '/KPEN/command_topic', 10)
+        self.laser_publisher = self.node.create_publisher(String, '/KPEN/laser_power_topic', 10)
+
+        self.laser_on = False  # State of the laser (off initially)
+
         self.init_ui()
         self.apply_styles()
         self.setup_connections()
@@ -29,11 +35,11 @@ class KeyboardTab(QWidget):
         left_column = QFrame()
         left_column.setFrameShape(QFrame.Shape.StyledPanel)
         left_column_layout = QVBoxLayout()
-        
+
         self.log_display = QTextEdit()
         self.log_display.setReadOnly(True)
         self.log_display.setFont(QFont('Arial', 11))
-        
+
         left_column_layout.addWidget(QLabel("History of sent messages"))
         left_column_layout.addWidget(self.log_display)
         left_column.setLayout(left_column_layout)
@@ -51,7 +57,7 @@ class KeyboardTab(QWidget):
 
         send_label = QLabel("Enter text:")
         send_label.setFont(QFont('Arial', 11))
-        
+
         input_layout = QHBoxLayout()
         self.text_to_send = QLineEdit()
         self.text_to_send.setFont(QFont('Arial', 11))
@@ -64,7 +70,7 @@ class KeyboardTab(QWidget):
         input_layout.addWidget(self.text_to_send)
         input_layout.addWidget(self.send_button)
 
-        # special characters button
+        # Special characters button
         buttons_layout = QGridLayout()
         self.backspace_button = QPushButton("Backspace")
         buttons_layout.addWidget(self.backspace_button, 1, 1)
@@ -72,11 +78,10 @@ class KeyboardTab(QWidget):
         self.space_button = QPushButton("Space")
         buttons_layout.addWidget(self.space_button, 1, 2)
 
-        self.capslock_button = QPushButton("Capslock")
-        buttons_layout.addWidget(self.capslock_button, 1, 3)
+        # Capslock removed - no button for it
 
         self.enter_button = QPushButton("Enter")
-        buttons_layout.addWidget(self.enter_button, 1, 4)
+        buttons_layout.addWidget(self.enter_button, 1, 3)
 
         send_layout.addWidget(send_label)
         send_layout.addLayout(input_layout)
@@ -84,6 +89,12 @@ class KeyboardTab(QWidget):
         send_group.setLayout(send_layout)
         right_column.addWidget(send_group)
         right_column.addStretch()
+
+        # Laser control button
+        self.laser_button = QPushButton("Laser OFF")
+        self.laser_button.setCheckable(True)
+        self.laser_button.setStyleSheet("background-color: #AA0000; color: white; font-weight: bold;")
+        right_column.addWidget(self.laser_button)
 
         # Prediction group
         predict_group = QGroupBox("Output prediction")
@@ -104,7 +115,7 @@ class KeyboardTab(QWidget):
         predict_group.setLayout(predict_layout)
         right_column.addWidget(predict_group)
         right_column.addStretch()
-        
+
         main_layout.addWidget(left_column)
         main_layout.addLayout(right_column)
         self.setLayout(main_layout)
@@ -114,25 +125,22 @@ class KeyboardTab(QWidget):
         self.clear_button.clicked.connect(self.clear_logs)
         self.backspace_button.clicked.connect(lambda: self.insert_special_sequence("\\b"))
         self.space_button.clicked.connect(lambda: self.insert_special_sequence("\\s"))
-        self.capslock_button.clicked.connect(lambda: self.insert_special_sequence("\\c"))
         self.enter_button.clicked.connect(lambda: self.insert_special_sequence("\\e"))
+
+        self.laser_button.clicked.connect(self.toggle_laser)
 
     def eventFilter(self, source, event):
         if source == self.text_to_send and event.type() == QKeyEvent.Type.KeyPress:
-            # Allow only specific keys
             allowed_keys = [
-                Qt.Key.Key_Backspace, Qt.Key.Key_Delete, Qt.Key.Key_Left, 
+                Qt.Key.Key_Backspace, Qt.Key.Key_Delete, Qt.Key.Key_Left,
                 Qt.Key.Key_Right, Qt.Key.Key_Home, Qt.Key.Key_End
             ]
-            
+            # Allow letters (upper and lower), digits, and backslash (for special sequences)
+            text = event.text()
             if event.key() in allowed_keys:
                 return False
-                
-            # Allow only a-z, 0-9 and backslash
-            text = event.text()
-            if text and not re.match(r'^[a-z0-9\\]$', text):
-                return True
-                
+            if text and not re.match(r'^[a-zA-Z0-9\\]$', text):
+                return True  # Block other chars
         return super().eventFilter(source, event)
 
     def insert_special_sequence(self, sequence):
@@ -144,63 +152,77 @@ class KeyboardTab(QWidget):
         text = self.text_to_send.text()
         if not text:
             return
-        
+
+        # Publish text on set_key_topic
         msg = String()
-        msg.data = text  # Przypisz tekst do pola data wiadomości String
-        self.keyboard_publisher.publish(msg)
-        
+        msg.data = text
+        self.set_key_publisher.publish(msg)
+
         self.log_history.append(text)
         self.update_log_display()
         self.text_to_send.clear()
         self.update_prediction_from_history()
-        
+
+        # Schedule sending "go" after 500 ms on command_topic
+        QTimer.singleShot(500, self.send_go_command)
+
+    def send_go_command(self):
+        msg = String()
+        msg.data = "go"
+        self.command_publisher.publish(msg)
+
+    def toggle_laser(self):
+        self.laser_on = not self.laser_on
+        if self.laser_on:
+            self.laser_button.setText("Laser ON")
+            self.laser_button.setStyleSheet("background-color: #2ECC71; color: black; font-weight: bold;")
+            msg = String()
+            msg.data = "ON"
+            self.laser_publisher.publish(msg)
+        else:
+            self.laser_button.setText("Laser OFF")
+            self.laser_button.setStyleSheet("background-color: #AA0000; color: white; font-weight: bold;")
+            msg = String()
+            msg.data = "OFF"
+            self.laser_publisher.publish(msg)
 
     def update_log_display(self):
         self.log_display.clear()
-        
-        # Create default text format
+
         default_format = QTextCharFormat()
         default_format.setFontWeight(QFont.Weight.Normal)
-        default_format.setBackground(QColor('#3a3a3a'))  # Background matching the style
-        
-        # Create format for special sequences
+        default_format.setBackground(QColor('#3a3a3a'))
+
         special_format = QTextCharFormat()
         special_format.setFontWeight(QFont.Weight.Bold)
         special_format.setBackground(QColor('#555555'))
-        
+
         for entry in self.log_history:
-            # Add visual separator between entries
             if self.log_display.toPlainText():
                 self.log_display.append("")
-            
+
             cursor = self.log_display.textCursor()
             cursor.movePosition(QTextCursor.MoveOperation.End)
-            
-            # Reset to default format at start of each entry
             cursor.setCharFormat(default_format)
-            
-            parts = re.split(r'(\\[bsec])', entry)  # Split on special sequences
-            
+
+            parts = re.split(r'(\\[bse])', entry)  # \c removed from pattern
+
             for part in parts:
                 if not part:
                     continue
-                    
-                if part.startswith('\\') and len(part) == 2 and part[1] in ['b', 's', 'c', 'e']:
-                    # Insert special sequence with special format
+
+                if part.startswith('\\') and len(part) == 2 and part[1] in ['b', 's', 'e']:
                     cursor.setCharFormat(special_format)
                     cursor.insertText(part)
-                    # Immediately reset to default format
                     cursor.setCharFormat(default_format)
                 else:
-                    # Insert normal text with default format
                     cursor.setCharFormat(default_format)
                     cursor.insertText(part)
 
     def update_prediction(self, text):
-        # Simulate output for all history entries plus current input
         full_output = []
-        current_caps = self.capslock
-        
+        # Capslock removed - no toggling, letters appear as typed
+
         # Process history entries
         for entry in self.log_history:
             i = 0
@@ -212,16 +234,13 @@ class KeyboardTab(QWidget):
                             full_output.pop()
                     elif cmd == 's':  # space
                         full_output.append(' ')
-                    elif cmd == 'c':  # capslock
-                        current_caps = not current_caps
                     elif cmd == 'e':  # enter
                         full_output.append('\n')
                     i += 2
                 else:
-                    char = entry[i].upper() if current_caps else entry[i]
-                    full_output.append(char)
+                    full_output.append(entry[i])
                     i += 1
-        
+
         # Process current input
         i = 0
         while i < len(text):
@@ -232,20 +251,16 @@ class KeyboardTab(QWidget):
                         full_output.pop()
                 elif cmd == 's':  # space
                     full_output.append(' ')
-                elif cmd == 'c':  # capslock
-                    current_caps = not current_caps
                 elif cmd == 'e':  # enter
                     full_output.append('\n')
                 i += 2
             else:
-                char = text[i].upper() if current_caps else text[i]
-                full_output.append(char)
+                full_output.append(text[i])
                 i += 1
-                
+
         self.predict_label.setPlainText(''.join(full_output))
 
     def update_prediction_from_history(self):
-        # Just call update_prediction with empty current input
         self.update_prediction("")
 
     def clear_logs(self):
