@@ -111,7 +111,7 @@ class PlotApp(QWidget):
         if newest_timestamp is None:
             return timestamps, values
         
-        one_hour_before_newest = newest_timestamp - datetime.timedelta(hours=1)  ##TU ZMIENIĆ 
+        one_hour_before_newest = newest_timestamp - datetime.timedelta(minutes=35)  ##TU ZMIENIĆ 
         
         try:
             with open(os.path.join(self.data_directory, filename), "r") as f:
@@ -167,7 +167,7 @@ class PlotApp(QWidget):
         
         newest_timestamp = self.find_newest_timestamp(filename)
         if newest_timestamp:
-            time_range = f"from {(newest_timestamp - datetime.timedelta(hours=1)):%H:%M} to {newest_timestamp:%H:%M}" ##TU ZMIENIĆ 
+            time_range = f"from {(newest_timestamp - datetime.timedelta(minutes=35)):%H:%M} to {newest_timestamp:%H:%M}" ##TU ZMIENIĆ 
         else:
             time_range = "last hour"
         
@@ -193,7 +193,7 @@ class PlotApp(QWidget):
         ax.xaxis.set_major_locator(mdates.AutoDateLocator())
         
         ax.set_ylabel(ylabel)
-        ax.set_title(f"{tab.title} ({time_range}, last {len(timestamps[0])} readings)")
+        ax.set_title(f"{tab.title} (last {len(timestamps[0])} readings)")
         ax.legend(loc='upper right')
         ax.grid(True, linestyle='--', alpha=0.7)
         tab.figure.autofmt_xdate()

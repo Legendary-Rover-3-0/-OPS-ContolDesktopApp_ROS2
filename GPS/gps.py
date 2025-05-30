@@ -10,7 +10,8 @@ import rclpy
 import sqlite3
 from datetime import datetime
 
-rover_coords = {'x': 39.2012129, 'y': -111.665272, 'alt': 0.0}
+# rover_coords = {'x': 39.2012129, 'y': -111.665272, 'alt': 0.0}
+rover_coords = {'x': 38.4062934, 'y': -110.7920149, 'alt': 0.0}
 targets = []
 
 class GPSTab(Node):
@@ -90,7 +91,7 @@ class GPSTab(Node):
         #self.root.after(0, self.update_rover_icon)
 
     def update_position_label(self):
-        self.position_label.config(text=f"Rover position: {rover_coords['x']:.6f}, {rover_coords['y']:.6f}, Altitude: {rover_coords['alt']:.2f} m")
+        self.position_label.config(text=f"Rover position: {rover_coords['x']}, {rover_coords['y']}, Altitude: {rover_coords['alt']:.2f} m")
 
     def center_map_on_rover(self):
         self.map_widget.set_position(rover_coords['x'], rover_coords['y'])
