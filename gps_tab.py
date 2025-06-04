@@ -14,6 +14,8 @@ import time
 class DatabaseWatcher(QThread):
     update_needed = pyqtSignal()
 
+
+
     def __init__(self, db_path):
         super().__init__()
         self.db_path = db_path
