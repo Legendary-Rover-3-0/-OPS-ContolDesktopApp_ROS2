@@ -152,6 +152,8 @@ class KeyboardTab(QWidget):
         text = self.text_to_send.text()
         if not text:
             return
+        
+        self.node.publish_button_states(1, 0, 0)
 
         # Publish text on set_key_topic
         msg = String()
@@ -185,6 +187,7 @@ class KeyboardTab(QWidget):
             msg = String()
             msg.data = "OFF"
             self.laser_publisher.publish(msg)
+            self.node.publish_button_states(0, 0, 1)
 
     def update_log_display(self):
         self.log_display.clear()
@@ -267,6 +270,7 @@ class KeyboardTab(QWidget):
         self.log_history = []
         self.log_display.clear()
         self.predict_label.clear()
+        self.node.publish_button_states(0, 0, 1)
 
     def apply_styles(self):
         self.setStyleSheet("""

@@ -21,25 +21,27 @@ class WaypointSaver(Node):
             self.get_logger().warn("Received odd number of elements in GPS data array. Skipping.")
             return
 
-        # Każdy element listy to osobny słownik z kluczem "waypoints"
-        yaml_entries = []
+        # Tworzymy listę punktów (bez dodatkowego klucza "waypoints" w każdym elemencie)
+        points = []
         for i in range(0, len(data), 2):
             lat = data[i]
             lon = data[i + 1]
-            entry = {
-                'waypoints': {
-                    'latitude': lat,
-                    'longitude': lon,
-                    'yaw': 0.0
-                }
+            point = {
+                'latitude': lat,
+                'longitude': lon,
+                'yaw': 0.0
             }
-            yaml_entries.append(entry)
+            points.append(point)
+
+        # Tworzymy ostateczny słownik z kluczem "waypoints" i listą punktów
+        yaml_data = {'waypoints': points}
 
         file_path = os.path.join(os.getcwd(), 'waypoints.yaml')
         with open(file_path, 'w') as yaml_file:
-            yaml.dump(yaml_entries, yaml_file, default_flow_style=False)
+            yaml.dump(yaml_data, yaml_file, default_flow_style=False)
 
-        self.get_logger().info(f"Wrote {len(yaml_entries)} waypoint entries to {file_path}")
+        self.get_logger().info(f"Wrote {len(points)} waypoint entries to {file_path}")
+
 
 def main(args=None):
     rclpy.init(args=args)

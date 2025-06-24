@@ -34,10 +34,8 @@ class ManipulatorTab(QWidget):
         
         # Definicja presetów czułości
         self.sensitivity_presets = [
-            ["Kuba", 100, 100, 100, 100, 80, 80],
-            ["Ustaw", 50, 50, 50, 50, 50, 50],
-            ["Sobie", 80, 80, 80, 60, 60, 60],
-            ["To", 30, 70, 30, 70, 30, 70]
+            ["Full Sensitivity", 100, 100, 100, 100, 100, 100],
+            ["Klawiatura", 90, 100, 60, 80, 75, 90],
         ]
 
         self.init_ui()
