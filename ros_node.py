@@ -7,12 +7,15 @@ from cv_bridge import CvBridge
 import cv2
 import numpy as np
 import serial
-
+import os
+from evdev import InputDevice, ecodes, list_devices
+import threading
 
 class ROSNode(Node):
     def __init__(self):
-    #def __init__(self, update_image_callback):
         super().__init__('ros_node')
+        self.paddle_buttons = [0, 0, 0, 0]  # Stan paddle'ów (P1, P2, P3, P4)
+        self.setup_evdev()  # Inicjalizacja evdev
         self.gamepad_publisher = self.create_publisher(Joy, 'gamepad_input', 10)
         self.button_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/led_state_topic', 10)
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10) 
@@ -40,17 +43,17 @@ class ROSNode(Node):
     #     if self.cmd_vel_callback:
     #         self.cmd_vel_callback(msg)
 
-    def publish_gamepad_input(self, buttons, axes, hat=(0, 0)):  
-        hat_x, hat_y = float(hat[0]), float(hat[1])  # Konwersja int -> float
-        axes.extend([hat_x, hat_y])  # Dodanie poprawnych wartości do listy axes
-
+    def publish_gamepad_input(self, buttons, axes, hat=(0, 0)):
+        # Dodaj paddle'e na końcu listy przycisków
+        extended_buttons = buttons + self.paddle_buttons  # Standardowe przyciski + paddle'e
+        
         msg = Joy()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.axes = axes  # Teraz zawiera także hat_x i hat_y jako float
-        msg.buttons = buttons  
+        msg.axes = axes
+        msg.buttons = extended_buttons
         self.gamepad_publisher.publish(msg)
-
-        self.publish_cmd_vel(axes, buttons)  
+        
+        self.publish_cmd_vel(axes, extended_buttons)  # Uwzględnij paddle'e
 
     
     def publish_empty_gamepad_input(self):  
@@ -59,6 +62,30 @@ class ROSNode(Node):
 
         self.publish_cmd_vel()  
 
+    def setup_evdev(self):
+        """Wyszukaj kontroler Xbox Elite i zainicjuj evdev."""
+        devices = [InputDevice(path) for path in list_devices()]
+
+
+    def start_evdev_thread(self):
+        """Wątek do odczytu paddle'ów przez evdev."""
+        def evdev_loop():
+            try:
+                for event in self.evdev_device.read_loop():
+                    if event.type == ecodes.EV_KEY:
+                        # Mapowanie kodów paddle'ów (sprawdź przez `evtest`)
+                        if event.code == 294:  # Paddle 1
+                            self.paddle_buttons[0] = event.value
+                        elif event.code == 295:  # Paddle 2
+                            self.paddle_buttons[1] = event.value
+                        elif event.code == 296:  # Paddle 2
+                            self.paddle_buttons[2] = event.value
+                        elif event.code == 297:  # Paddle 2
+                            self.paddle_buttons[3] = event.value
+            except OSError as e:
+                self.get_logger().error(f"Błąd evdev: {e}")
+
+        threading.Thread(target=evdev_loop, daemon=True).start()
 
     def publish_cmd_vel(self, axes=None, buttons=None):
         if axes is None or buttons is None:
