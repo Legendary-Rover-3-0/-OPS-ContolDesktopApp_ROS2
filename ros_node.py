@@ -143,6 +143,11 @@ class ROSNode(Node):
         #return round((value + 1.0) / 2.0 * 255)
         return int((value*127.0)+128)
 
+    def float_to_byte_100(self, value):
+        """Mapowanie float z [-100, 100] na bajt [0, 254]."""
+        value = max(-100.0, min(100.0, value))  # clamp
+        return int((value + 100.0) / 200.0 * 254)
+
     def send_serial_frame(self, mark, *bytes):
         try:
             # Prosty checksum: suma x + z modulo 256
