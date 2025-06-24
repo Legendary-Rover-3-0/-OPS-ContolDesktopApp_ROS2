@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider,
                             QFrame, QPushButton)
 from PyQt6.QtCore import Qt
 from rclpy.node import Node
-from std_msgs.msg import String, Float32
+from std_msgs.msg import String, Float32, Float64MultiArray
 from geometry_msgs.msg import Twist
 import config
 
@@ -250,7 +250,7 @@ class ManipulatorTab(QWidget):
 
 
     def init_ros_publishers(self):
-        self.publisher = self.node.create_publisher(Twist, "/array_topic", 10)
+        self.publisher = self.node.create_publisher(Float64MultiArray, "/array_topic", 10)
 
     def init_ros_subscribers(self):
         self.node.create_subscription(String, "/RFID/string_data", self.rfid_callback, 10)
@@ -366,7 +366,7 @@ class ManipulatorTab(QWidget):
             self.movement_labels[i].setText(f"{name}: {value:.2f}")# Formatowanie do dwóch miejsc po przecinku
 
     def publish_values(self):
-        msg = Twist()
+        msg = Float64MultiArray()
         
         # Załóżmy, że np. wartości przypisujemy tak:
         # Stopień 1 -> linear.x
@@ -376,12 +376,21 @@ class ManipulatorTab(QWidget):
         # Stopień 5 -> angular.y
         # Stopień 6 -> angular.z
 
-        msg.linear.x = self.current_values[0] / 100.0
-        msg.linear.y = self.current_values[1] / 100.0
-        msg.linear.z = self.current_values[2] / 100.0
-        msg.angular.x = self.current_values[3] / 100.0
-        msg.angular.y = self.current_values[4] / 100.0
-        msg.angular.z = self.current_values[5] / 100.0
+        # msg.linear.x = self.current_values[0] / 100.0
+        # msg.linear.y = self.current_values[1] / 100.0
+        # msg.linear.z = self.current_values[2] / 100.0
+        # msg.angular.x = self.current_values[3] / 100.0
+        # msg.angular.y = self.current_values[4] / 100.0
+        # msg.angular.z = self.current_values[5] / 100.0
+
+        msg.data = [0.0] * 6 
+        msg.data[0] = self.current_values[0]
+        msg.data[1] = self.current_values[1]
+        msg.data[2] = self.current_values[2]
+        msg.data[3] = self.current_values[3]
+        msg.data[4] = self.current_values[4]
+        msg.data[5] = self.current_values[5]
+
 
         # Wyślij ramkę
         if self.node.communication_mode == 'ROS2':
@@ -400,7 +409,8 @@ class ManipulatorTab(QWidget):
 
     def publish_empty_values(self):
         if self.node.communication_mode == 'ROS2':
-            msg = Twist()
+            msg = Float64MultiArray()
+            msg.data = [0.0] * 6 
             self.publisher.publish(msg)
         elif self.node.communication_mode == 'SATEL':
             self.node.send_serial_frame("MN",128, 128, 128, 128, 128, 128)
