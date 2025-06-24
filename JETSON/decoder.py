@@ -4,7 +4,7 @@ from geometry_msgs.msg import Twist
 import serial
 import serial.tools.list_ports
 import threading
-from std_msgs.msg import Int8MultiArray, Int32MultiArray, Int16
+from std_msgs.msg import Int8MultiArray, Int32MultiArray, Int16, Float64MultiArray
 import argparse
 
 debug = True
@@ -14,7 +14,7 @@ class SerialReceiverNode(Node):
     def __init__(self, port_name: str):
         super().__init__('serial_receiver')
         self.drive_publisher = self.create_publisher(Twist, '/cmd_vel_nav', 10)
-        self.mani_publisher = self.create_publisher(Twist, '/array_topic', 10)
+        self.mani_publisher = self.create_publisher(Float64MultiArray, '/array_topic', 10)
         self.button_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/led_state_topic', 10)
         self.servo_publisher = self.create_publisher(Int32MultiArray, '/ESP32_GIZ/servo_angles_topic', 10)
         self.koszelnik_publisher = self.create_publisher(Int8MultiArray, '/ESP32_GIZ/output_state_topic', 10)
@@ -88,36 +88,37 @@ class SerialReceiverNode(Node):
                 if debug: self.get_logger().info(f"Odebrano DV: x={x:.2f}, z={z:.2f}")
 
             elif header == b'MN' and len(frame) == 9:
-                linear_x = frame[2]
-                linear_y = frame[3]
-                linear_z = frame[4]
-                angular_x = frame[5]
-                angular_y = frame[6]
-                angular_z = frame[7]
+                val1 = frame[2]
+                val2 = frame[3]
+                val3 = frame[4]
+                val4 = frame[5]
+                val5 = frame[6]
+                val6 = frame[7]
                 checksum = frame[8]
 
-                if (linear_x + linear_y + linear_z + angular_x + angular_y + angular_z) % 256 != checksum:
+                if (val1 + val2 + val3 + val4 + val5 + val6) % 256 != checksum:
                     if debug: self.get_logger().warn("Nieprawidłowa suma kontrolna.")
                     return
                 
-                linear_x = self.byte_to_float(linear_x)
-                linear_y = self.byte_to_float(linear_y)
-                linear_z = self.byte_to_float(linear_z)
-                angular_x = self.byte_to_float(angular_x)
-                angular_y = self.byte_to_float(angular_y)
-                angular_z = self.byte_to_float(angular_z)
+                val1 = self.byte_to_float_100(val1)
+                val2 = self.byte_to_float_100(val2)
+                val3 = self.byte_to_float_100(val3)
+                val4 = self.byte_to_float_100(val4)
+                val5 = self.byte_to_float_100(val5)
+                val6 = self.byte_to_float_100(val6)
                 
-                twist = Twist()
-                twist.linear.x = linear_x
-                twist.linear.y = linear_y
-                twist.linear.z = linear_z
-                twist.angular.x = angular_x
-                twist.angular.y = angular_y
-                twist.angular.z = angular_z
+                msg = Float64MultiArray()
+                msg.data = [0.0] * 6 
+                msg.data[0] = val1
+                msg.data[1] = val2
+                msg.data[2] = val3
+                msg.data[3] = val4
+                msg.data[4] = val5
+                msg.data[5] = val6
 
-                if not prevent_ROS: self.mani_publisher.publish(twist)
-                if debug: self.get_logger().info(f"Odebrano MN: lin_x={linear_x:.2f}, lin_y={linear_y:.2f}, lin_z={linear_z},\
-ang_x={angular_x:.2f}, ang_y={angular_y:.2f}, ang_z={angular_z:.2f}")
+                if not prevent_ROS: self.mani_publisher.publish(msg)
+                if debug: self.get_logger().info(f"Odebrano MN: val1={val1:.2f}, val2={val2:.2f}, val3={val3},\
+val4={val4:.2f}, val5={val5:.2f}, val6={val6:.2f}")
                 
             elif header == b'GL' and len(frame) == 4:
                 byte = frame[2]
@@ -217,7 +218,13 @@ ang_x={angular_x:.2f}, ang_y={angular_y:.2f}, ang_z={angular_z:.2f}")
             if debug: self.get_logger().error(f"Błąd parsowania ramki: {e}")
 
     def byte_to_float(self, b):
+        """Mapowanie bajtu [0, 254] z powrotem na float [-1, 1]."""
         return (b - 128) / 127.0
+    
+    def byte_to_float_100(self, byte_value):
+        """Mapowanie bajtu [0, 254] z powrotem na float [-100, 100]."""
+        byte_value = max(0, min(254, byte_value))  # clamp
+        return (byte_value / 254.0) * 200.0 - 100.0
 
 
 def main():

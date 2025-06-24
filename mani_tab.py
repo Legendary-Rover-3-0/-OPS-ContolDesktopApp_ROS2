@@ -398,12 +398,12 @@ class ManipulatorTab(QWidget):
 
         elif self.node.communication_mode == 'SATEL':
             self.node.send_serial_frame("MN",
-                                self.node.float_to_byte(msg.linear.x),
-                                self.node.float_to_byte(msg.linear.y),
-                                self.node.float_to_byte(msg.linear.z),
-                                self.node.float_to_byte(msg.angular.x),
-                                self.node.float_to_byte(msg.angular.y),
-                                self.node.float_to_byte(msg.angular.z)
+                                self.node.float_to_byte_100(msg.data[0]),
+                                self.node.float_to_byte_100(msg.data[1]),
+                                self.node.float_to_byte_100(msg.data[2]),
+                                self.node.float_to_byte_100(msg.data[3]),
+                                self.node.float_to_byte_100(msg.data[4]),
+                                self.node.float_to_byte_100(msg.data[5])
                                 )
 
 
@@ -413,7 +413,7 @@ class ManipulatorTab(QWidget):
             msg.data = [0.0] * 6 
             self.publisher.publish(msg)
         elif self.node.communication_mode == 'SATEL':
-            self.node.send_serial_frame("MN",128, 128, 128, 128, 128, 128)
+            self.node.send_serial_frame("MN",127, 127, 127, 127, 127, 127)
 
     def update_sensitivity(self, index, value):
         self.sensitivities[index] = float(value)  # Aktualizacja konkretnego stopnia
