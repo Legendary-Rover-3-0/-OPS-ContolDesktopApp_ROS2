@@ -60,10 +60,10 @@ class StatusTab(QWidget):
         ports_layout.addWidget(self.start_agent_screen_button)
         ports_layout.addStretch(20)
 
-        #self.unplug_and_plug_button = QPushButton("🔌 Odłącz i podłącz Port")
-        #self.unplug_and_plug_button.clicked.connect(self.reset_agent)
-        #ports_layout.addWidget(self.unplug_and_plug_button)
-        #ports_layout.addStretch(20)
+        self.unplug_and_plug_button = QPushButton("🔌 Zresetuj Wszytkie Porty")
+        self.unplug_and_plug_button.clicked.connect(self.reset_everything)
+        ports_layout.addWidget(self.unplug_and_plug_button)
+        ports_layout.addStretch(20)
 
         self.start_autonomy_button = QPushButton("🤖 Uruchom autonomie (baza)")
         self.start_autonomy_button.clicked.connect(self.start_autonomy)
@@ -400,16 +400,13 @@ class StatusTab(QWidget):
         thread.finished.connect(lambda: self.cleanup_thread(thread, callback))
         self.threads.append(thread)  # Dodanie wątku do listy
         thread.start()
+    
+    def reset_everything(self):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '/home/legendary/kubatk/unplug_URC.sh' --become",
+            callback=self.view_screens
+        )
 
-
-    def reset_agent(self):
-        selected = self.port_list.currentItem()
-        if selected:
-            port = selected.text().replace('/dev/', '')
-            self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '/home/legendary/kubatk/remote.sh {port}'",
-                callback=self.view_screens
-            )
 
 # Kod uruchamiający aplikację
 if __name__ == '__main__':
