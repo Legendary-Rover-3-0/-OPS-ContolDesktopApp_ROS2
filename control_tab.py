@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                            QPushButton, QComboBox, QSlider, QGroupBox,)
+                            QPushButton, QComboBox, QSlider, QGroupBox, QSizePolicy)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtGui import QFont
@@ -18,7 +18,7 @@ class PortScannerWorker(QObject):
 class ControlTab(QWidget):
     def __init__(self, gamepads, connect_satel, toggle_communication_callback,
                  toggle_manual_callback, toggle_kill_switch_callback, 
-                 toggle_autonomy_callback, update_speed_factor_callback):
+                 toggle_autonomy_callback, update_speed_factor_callback, refresh_gamepad_list, disconnect_gamepad_callback):
         super().__init__()
         self.gamepads = gamepads
         self.toggle_kill_switch_callback = toggle_kill_switch_callback
@@ -27,6 +27,8 @@ class ControlTab(QWidget):
         self.update_speed_factor_callback = update_speed_factor_callback
         self.connect_satel = connect_satel
         self.toggle_communication_callback = toggle_communication_callback
+        self.refresh_gamepad_list = refresh_gamepad_list
+        self.disconnect_gamepad_callback = disconnect_gamepad_callback
         
         self.init_ui()
 
@@ -120,13 +122,34 @@ class ControlTab(QWidget):
         pad_layout = QVBoxLayout()
 
         # Wybór pada
-        self.label = QLabel('Wybierz pada i naciśnij przycisk, aby wysłać dane przez ROS2')
+        self.label = QLabel('Brak podłączonego pada')
         pad_layout.addWidget(self.label)
 
+        # Wiersz z selektorem pada i przyciskami
+        gamepad_controls_row = QHBoxLayout()
+        
+        # Przycisk odświeżania listy padów
+        self.refresh_gamepad_button = QPushButton("🔄️")
+        self.refresh_gamepad_button.setToolTip("Odśwież listę padów")
+        self.refresh_gamepad_button.setFixedWidth(30)
+        self.refresh_gamepad_button.clicked.connect(self.refresh_gamepad_list)
+        gamepad_controls_row.addWidget(self.refresh_gamepad_button)
+        
+        # Lista padów
         self.gamepad_selector = QComboBox()
-        for i, gamepad in enumerate(self.gamepads):
-            self.gamepad_selector.addItem(gamepad.get_name(), i)
-        pad_layout.addWidget(self.gamepad_selector)
+        self.gamepad_selector.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.update_gamepad_list(self.gamepads)
+        gamepad_controls_row.addWidget(self.gamepad_selector)
+        
+        # Przycisk rozłącz
+        self.disconnect_button = QPushButton("✖")
+        self.disconnect_button.setToolTip("Rozłącz pad")
+        self.disconnect_button.setFixedWidth(30)
+        self.disconnect_button.setEnabled(False)
+        self.disconnect_button.clicked.connect(self.disconnect_gamepad_callback)
+        gamepad_controls_row.addWidget(self.disconnect_button)
+        
+        pad_layout.addLayout(gamepad_controls_row)
 
         # Suwak prędkości
         speed_section = QVBoxLayout()
@@ -198,6 +221,15 @@ class ControlTab(QWidget):
 
         self.setLayout(main_layout)
 
+    def update_gamepad_list(self, gamepads):
+        """Aktualizuje listę dostępnych gamepadów w selektorze"""
+        self.gamepad_selector.clear()
+        for i, gamepad in enumerate(gamepads):
+            self.gamepad_selector.addItem(gamepad.get_name(), i)
+        
+        if not gamepads:
+            self.gamepad_selector.addItem("Brak dostępnych padów", -1)
+
     def on_speed_changed(self, value):
         """Obsługa zmiany wartości suwaka"""
         self.speed_label.setText(f'{value}%')
@@ -227,7 +259,6 @@ class ControlTab(QWidget):
             self.serial_port_selector.addItems(port_list)
         else:
             self.serial_port_selector.addItem("Brak portów")
-
 
     def update_button_state(self, button, text, state):
         color = '#2ECC71' if state else '#FF5733'  # Zielony/Czerwony

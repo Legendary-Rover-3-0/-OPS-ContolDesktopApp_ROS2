@@ -70,10 +70,11 @@ class MainWindow(QMainWindow):
             }
         """)
 
-        self.gamepads = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+        self.gamepads = []
         self.selected_gamepad = None
         self.reading_thread = None
         self.running = False
+        self.gamepad_connected = False
 
         self.speed_factor = 1.0  # Domyślna wartość 100%
 
@@ -87,7 +88,7 @@ class MainWindow(QMainWindow):
         font.setPointSize(12)
         self.tabs.setFont(font)
 
-        self.control_tab = ControlTab(self.gamepads, self.connect_satel, self.toggle_communication_callback, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor)
+        self.control_tab = ControlTab(self.gamepads, self.connect_satel, self.toggle_communication_callback, self.toggle_manual_callback, self.toggle_kill_switch, self.toggle_autonomy, self.update_speed_factor, self.refresh_gamepads, self.disconnect_gamepad)
         self.ros_node = ROSNode()
         self.serva_tab = ServaTab(self.ros_node, self.gamepads)
         self.science_tab = ScienceTab(self.ros_node, self.serva_tab)
@@ -99,7 +100,6 @@ class MainWindow(QMainWindow):
         self.giz2_tab = None  # Placeholder for future use
         #self.radiation_map_tab = RadiationMapTab()
 
-
         self.tabs.addTab(self.control_tab, 'Sterowanie')
         self.tabs.addTab(self.mani_tab, 'Manipulator')
         self.tabs.addTab(self.gvision_tab, 'Wizja')
@@ -110,18 +110,61 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.kayboard_tab, 'Klawiatura')
         #self.tabs.addTab(self.radiation_map_tab, 'Radiation Map')
 
-
         self.setCentralWidget(self.tabs)
 
-        #Uruchomienie timera do aktualizacji obrazów
+        # Uruchomienie timera do aktualizacji obrazów i sprawdzania stanu pada
         self.timer = QTimer()
-        self.timer.timeout.connect(lambda: rclpy.spin_once(self.ros_node, timeout_sec=0.01))
+        self.timer.timeout.connect(self.update_status)
         self.timer.start(30)
 
         self.kill_switch_state = 0
         self.autonomy_state = 0
         self.manual_drive_state = 0
         self.camera_windows = [None] * 4
+
+        # Inicjalizacja listy gamepadów
+        self.refresh_gamepads()
+
+    def update_status(self):
+        rclpy.spin_once(self.ros_node, timeout_sec=0.01)
+        self.check_gamepad_connection()
+
+    def refresh_gamepads(self):
+        """Odświeża listę podłączonych gamepadów"""
+        pygame.joystick.quit()
+        pygame.joystick.init()
+        self.gamepads = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+        self.control_tab.update_gamepad_list(self.gamepads)
+
+    def check_gamepad_connection(self):
+        """Sprawdza, czy wybrany gamepad jest nadal podłączony"""
+        if self.selected_gamepad is not None and not self.gamepad_connected:
+            # Jeśli gamepad był podłączony, ale teraz nie ma
+            self.handle_gamepad_disconnected()
+
+    def handle_gamepad_disconnected(self):
+        """Obsługa sytuacji gdy gamepad zostanie odłączony"""
+        if self.manual_drive_state == 1:
+            print("Gamepad odłączony - kill switch ON")
+            self.toggle_kill_switch()  # Wyłączenie manual drive
+            
+        self.selected_gamepad = None
+        self.gamepad_connected = False
+        self.control_tab.label.setText("Brak podłączonego pada")
+        self.control_tab.disconnect_button.setEnabled(False)
+        self.refresh_gamepads()
+
+    def disconnect_gamepad(self):
+        """Rozłącza aktualnie podłączony gamepad"""
+        if self.selected_gamepad is not None:
+            if self.manual_drive_state == 1:
+                self.toggle_kill_switch()  # Wyłączenie manual drive
+                
+            self.selected_gamepad = None
+            self.gamepad_connected = False
+            self.control_tab.label.setText("Brak podłączonego pada")
+            self.control_tab.disconnect_button.setEnabled(False)
+            print("Gamepad rozłączony ręcznie")
 
     def connect_satel(self):
         """Ustaw nowy port szeregowy"""
@@ -136,7 +179,6 @@ class MainWindow(QMainWindow):
 
             print(f"Rozczono port.")
             return
-
 
         selected_port = self.control_tab.serial_port_selector.currentText()
         try:
@@ -162,11 +204,9 @@ class MainWindow(QMainWindow):
         else:
             self.control_tab.style_button(self.control_tab.connect_serial_button, config.BUTTON_OFF_COLOR)
             self.control_tab.connect_serial_button.setText("Error: Not Connected!")
-        
 
     def toggle_communication_callback(self):
         # Wylaczenie skryptu jazdy autonomicznej
-
         if self.ros_node.communication_mode == "ROS2" and self.ros_node.serial_port is not None:
             self.ros_node.communication_mode = "SATEL"
             self.control_tab.style_button(self.control_tab.communication_button, config.BUTTON_SELECTED_COLOR)
@@ -176,8 +216,6 @@ class MainWindow(QMainWindow):
             self.control_tab.style_button(self.control_tab.communication_button, config.BUTTON_DEFAULT_COLOR)
             
         self.control_tab.communication_button.setText(f"Communication: {self.ros_node.communication_mode}")
-        
-
 
     def toggle_kill_switch(self):
         # Wylaczenie skryptu jazdy autonomicznej
@@ -196,6 +234,11 @@ class MainWindow(QMainWindow):
         self.mani_tab.is_gamepad_active = self.manual_drive_state == 1
         self.serva_tab.is_gamepad_active = self.manual_drive_state == 1
 
+        for _ in range(5):
+            self.ros_node.publish_empty_gamepad_input()
+            self.mani_tab.publish_empty_values()
+            time.sleep(0.05)
+
     def toggle_autonomy(self):
         self.autonomy_state = 1 - self.autonomy_state
         self.kill_switch_state = 0
@@ -208,6 +251,11 @@ class MainWindow(QMainWindow):
         # Aktualizacja stanu gamepada w ManiTab i ServaTab
         self.mani_tab.is_gamepad_active = self.manual_drive_state == 1
         self.serva_tab.is_gamepad_active = self.manual_drive_state == 1
+
+        for _ in range(5):
+            self.ros_node.publish_empty_gamepad_input()
+            self.mani_tab.publish_empty_values()
+            time.sleep(0.05)
 
         # Uruchomienie skryptu jazdy autonomicznej
         if self.autonomy_state:
@@ -234,46 +282,78 @@ class MainWindow(QMainWindow):
         
         if self.manual_drive_state == 1:
             self.start_reading()
+        else:
+            self.running = False
+            for _ in range(5):
+                self.ros_node.publish_empty_gamepad_input()
+                self.mani_tab.publish_empty_values()
+                time.sleep(0.05)
                 
     def start_reading(self):
         index = self.control_tab.gamepad_selector.currentData()
         if index is not None:
-            self.selected_gamepad = pygame.joystick.Joystick(index)
-            self.selected_gamepad.init()
-            self.control_tab.label.setText(f'Wybrano: {self.selected_gamepad.get_name()}')
-            
-            # Przekazanie wybranego gamepada do ManiTab i ServaTab
-            self.mani_tab.set_selected_gamepad(self.selected_gamepad)
-            self.serva_tab.set_selected_gamepad(self.selected_gamepad)
-            
-            if self.reading_thread is None or not self.reading_thread.is_alive():
-                self.running = True
-                self.reading_thread = threading.Thread(target=self.read_gamepad)#, daemon=True)
-                self.reading_thread.start()
+            try:
+                self.selected_gamepad = pygame.joystick.Joystick(index)
+                self.selected_gamepad.init()
+                self.gamepad_connected = True
+                self.control_tab.label.setText(f'Wybrano: {self.selected_gamepad.get_name()}')
+                self.control_tab.disconnect_button.setEnabled(True)
+                
+                # Przekazanie wybranego gamepada do ManiTab i ServaTab
+                self.mani_tab.set_selected_gamepad(self.selected_gamepad)
+                self.serva_tab.set_selected_gamepad(self.selected_gamepad)
+                
+                if self.reading_thread is None or not self.reading_thread.is_alive():
+                    self.running = True
+                    self.reading_thread = threading.Thread(target=self.read_gamepad)
+                    self.reading_thread.start()
+            except pygame.error as e:
+                print(f"Błąd podczas inicjalizacji gamepada: {e}")
+                self.handle_gamepad_disconnected()
 
     def read_gamepad(self):
-        while self.running:
-            if self.manual_drive_state == 0:
-                for _ in range(5):
+        pygame.event.set_allowed([pygame.JOYDEVICEREMOVED])
+        
+        while self.running and self.manual_drive_state == 1:
+            try:
+                for event in pygame.event.get():
+                    if event.type == pygame.JOYDEVICEREMOVED:
+                        print(f"Gamepad odłączony")
+                        self.handle_gamepad_disconnected()
+                        break
+                
+                if self.selected_gamepad is None or not self.gamepad_connected:
                     self.ros_node.publish_empty_gamepad_input()
                     self.mani_tab.publish_empty_values()
-                    time.sleep(0.05)
-                self.running = False
-                break
-            else:
-                pygame.event.pump()
+                    time.sleep(0.1)
+                    continue
+                    
+                # Normalne odczytywanie danych gamepada
                 buttons = [self.selected_gamepad.get_button(i) for i in range(self.selected_gamepad.get_numbuttons())]
                 axes = [self.selected_gamepad.get_axis(i) for i in range(min(6, self.selected_gamepad.get_numaxes()))]
-                hat = self.selected_gamepad.get_hat(0)  # Pobranie wartości D-pad (hat)
+                hat = self.selected_gamepad.get_hat(0)
 
-                self.ros_node.publish_gamepad_input(buttons, axes, hat)  # Teraz hat jest dodawany do axes
-            pygame.time.wait(50)
+                self.ros_node.publish_gamepad_input(buttons, axes, hat)
+                pygame.time.wait(50)
+                
+            except pygame.error as e:
+                print(f"Błąd pygame: {e}")
+                self.handle_gamepad_disconnected()
+                break
+            except Exception as e:
+                print(f"Nieoczekiwany błąd: {e}")
+                break
 
+    # def is_gamepad_connected(self):
+    #     """Sprawdza czy wybrany gamepad jest nadal podłączony"""
+    #     try:
+    #         # Próba odczytu nazwy gamepada - jeśli się nie uda, to gamepad jest odłączony
+    #         _ = self.selected_gamepad.get_name()
+    #         return True
+    #     except pygame.error:
+    #         return False
 
     def update_speed_factor(self, factor):
         """Aktualizuje współczynnik prędkości w ROSNode"""
         self.speed_factor = factor
         self.ros_node.update_speed_factor(factor)
-
-
-
