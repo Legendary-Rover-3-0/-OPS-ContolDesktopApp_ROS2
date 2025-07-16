@@ -300,22 +300,22 @@ class ManipulatorTab(QWidget):
 
             # Mapa przycisków do stopni swobody
             button_mapping = {
-                0: (0, -1),  # Stopień 1 dół
-                1: (0, 1),
+                0: (0, 1),  # Stopień 1 dół
+                1: (0, -1),
                 2: (4, 1),  # Stopień 5 chwytak obrot
                 3: (4, -1),
-                6: (3, 1),  # Stopień 6 chwytak zacisk
-                7: (3, -1),
-                9: (5, 1),  # Stopień 4 nadgarstek
-                10: (5, -1),
+                6: (5, -1),  # Stopień 6 chwytak zacisk
+                7: (5, 1),
+                9: (3, 1),  # Stopień 4 nadgarstek
+                10: (3, -1),
             }
 
             # Mapa HAT (krzyżaka) do stopni swobody
             # hat_mapping = {
-            #     (-1, 0): (3, 1),  # Stopień 3 gora dol 3
-            #     (1, 0): (3, -1),
-            #     (0, -1): (5, -1),  # Stopień 2 przod tyl 5
-            #     (0, 1): (5, 1),
+            #     (1, 0): (3, 1),  # Stopień 3 gora dol 3
+            #     (-1, 0): (3, -1),
+            #     (0, 1): (5, -1),  # Stopień 2 przod tyl 5
+            #     (0, -1): (5, 1),
             # }
 
             # Odczyt przycisków
@@ -328,15 +328,15 @@ class ManipulatorTab(QWidget):
             hat = self.selected_gamepad.get_hat(0)
 
             # Sprawdzanie osi X
-            if hat[0] == 1:  
+            if hat[0] == -1:  
                 new_values[2] += self.sensitivities[2]
-            elif hat[0] == -1:  
+            elif hat[0] == 1:  
                 new_values[2] -= self.sensitivities[2]
 
             # Sprawdzanie osi Y
-            if hat[1] == 1:  
+            if hat[1] == -1:  
                 new_values[1] += self.sensitivities[1]
-            elif hat[1] == -1:  
+            elif hat[1] == 1:  
                 new_values[1] -= self.sensitivities[1]
 
             # Ograniczenie zakresu wartości
