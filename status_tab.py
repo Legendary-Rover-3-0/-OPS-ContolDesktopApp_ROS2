@@ -1,34 +1,48 @@
 import sys
 import subprocess
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QListWidget, QHBoxLayout, QComboBox, QDialog
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QRunnable, QThreadPool, QObject
 import config
 import os
 os.environ['ANSIBLE_PYTHON_WARNINGS'] = 'False'
 
-# Wątek do wykonywania zadań Ansible w tle
-class AnsibleThread(QThread):
+# Nowa klasa QObject dla sygnałów
+class AnsibleSignals(QObject):
     output = pyqtSignal(str)
+    finished = pyqtSignal()
+    error = pyqtSignal(str)
 
-    def __init__(self, command):
+# Wątek do wykonywania zadań Ansible w tle (QRunnable)
+class AnsibleTask(QRunnable):
+    def __init__(self, command, signals):
         super().__init__()
         self.command = command
+        self.signals = signals # Przekazujemy instancję sygnałów
 
     def run(self):
-        process = subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        if stdout:
-            self.output.emit(stdout.decode())
-        if stderr:
-            self.output.emit(stderr.decode())
+        try:
+            process = subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            if stdout:
+                self.signals.output.emit(stdout.decode())
+            if stderr:
+                self.signals.output.emit(stderr.decode())
+        except Exception as e:
+            self.signals.output.emit(f"Błąd wykonania Ansible: {e}")
+            self.signals.error.emit(str(e))
+        finally:
+            self.signals.finished.emit() # Zawsze emituj sygnał finished na koniec
 
 # Klasa StatusTab (zawierająca GUI i logikę Ansible)
 class StatusTab(QWidget):
     def __init__(self):
         super().__init__()
+        self.threadpool = QThreadPool()
+        self.inventory_path = config.ANSIBLE_INVENTORY
+        # self.buttons = [] # Nadal usunięte
+        self.active_ansible_tasks = 0 # Licznik aktywnych zadań Ansible
+        # self.current_ansible_task = None # <<< USUNIĘTO - nie jest już potrzebne
         self.init_ui()
-        self.threads = []  # Lista do przechowywania aktywnych wątków
-        self.inventory_path = config.ANSIBLE_INVENTORY  # Ścieżka do pliku inventory
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -55,7 +69,6 @@ class StatusTab(QWidget):
         self.refresh_button.clicked.connect(self.get_ports)
         ports_layout.addWidget(self.refresh_button)
 
-                
         self.start_agent_screen_button = QPushButton("🚀 Uruchom Agent MicroROS")
         self.start_agent_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
         ports_layout.addWidget(self.start_agent_screen_button)
@@ -66,7 +79,6 @@ class StatusTab(QWidget):
         buttons_container.setLayout(buttons_layout)
 
         # Pierwsza kolumna przycisków
-
         left_column = QVBoxLayout()
         self.unplug_and_plug_button = QPushButton("🔌 Zresetuj Wszytkie Porty")
         self.unplug_and_plug_button.clicked.connect(self.reset_everything)
@@ -98,8 +110,7 @@ class StatusTab(QWidget):
         self.show_ports_details.clicked.connect(self.show_ports_details_callback)
         right_column.addWidget(self.show_ports_details)
 
-        self.empty_button = QPushButton("                  ")
-        #self.empty_butto.clicked.connect(self.auto_stop_callback)
+        self.empty_button = QPushButton("            ")
         right_column.addWidget(self.empty_button)
 
         # Dodanie kolumn do kontenera
@@ -133,7 +144,6 @@ class StatusTab(QWidget):
         self.wipe_dead_button = QPushButton("🗑️ Usuń martwe procesy")
         self.wipe_dead_button.clicked.connect(self.wipe_dead_sceens)
         screens_layout.addWidget(self.wipe_dead_button)
-
 
         list_layout.addLayout(ports_layout)
         list_layout.addSpacing(10)
@@ -225,10 +235,8 @@ class StatusTab(QWidget):
         self.stop_vision_script_button4.clicked.connect(lambda _: self.stop_vision_script(4))
         stop_vision_buttons_layout.addWidget(self.stop_vision_script_button4)
 
-
-        layout.addLayout(vision_buttons_layout)  # Dodanie poziomego layoutu do głównego layoutu
-        layout.addLayout(stop_vision_buttons_layout)  # Dodanie poziomego layoutu do głównego layoutu
-
+        layout.addLayout(vision_buttons_layout)
+        layout.addLayout(stop_vision_buttons_layout)
 
         self.output_area = QTextEdit()
         self.output_area.setReadOnly(True)
@@ -238,21 +246,19 @@ class StatusTab(QWidget):
         self.setWindowTitle("Zarządzanie agentami")
 
     def run_vision_script(self, cam):
-        """Uruchamia skrypt w screenie z automatycznym restartem"""
         commands = {
             1: f"while true; do {config.CAMERA_1_CMD}; sleep 1; done",
-            2: f"while true; do {config.CAMERA_2_CMD}; sleep 1; done", 
+            2: f"while true; do {config.CAMERA_2_CMD}; sleep 1; done",  
             3: f"while true; do {config.CAMERA_3_CMD}; sleep 1; done",
             4: f"while true; do {config.CAMERA_4_CMD}; sleep 1; done"
         }
-    
+        
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS camera{cam} bash -c \"{commands[cam]}\"'",
             callback=self.view_screens
         )
 
     def stop_vision_script(self, cam):
-        """Zatrzymuje skrypt wizji i zamyka powiązany screen"""
         commands = {
             1: config.CAMERA_1_HANDLE,
             2: config.CAMERA_2_HANDLE,
@@ -262,8 +268,8 @@ class StatusTab(QWidget):
 
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '"
-            f"fuser -k {commands[cam]}; "  # Zabija proces GStreamera
-            f"screen -S camera{cam} -X quit'"  # Zamyka screen
+            f"fuser -k {commands[cam]}; "
+            f"screen -S camera{cam} -X quit'"
             f"",
             callback=self.view_screens
         )
@@ -287,16 +293,15 @@ class StatusTab(QWidget):
         return self.group_selector.currentText()
 
     def get_ports(self):
-        #self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyS\* -o -name ttyUSB\* -o -name ttyA\* \)'")
-        # self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'find /dev/ -maxdepth 1 -type c \( -name ttyUSB\* -o -name ttyAC\* \)'")
         self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '/home/legendary/kubatk/list_ports_jetson.py'")
 
     def start_screen(self, name_scrypt):
         selected = self.port_list.currentItem()
-        selected = selected.text().split(" ")
-        selected = selected[0]
         if selected:
-            self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS {selected.replace('/dev/', '')} {name_scrypt} {selected}'", callback=self.view_screens)
+            selected_text = selected.text().split(" ")[0]
+            self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS {selected_text.replace('/dev/', '')} {name_scrypt} {selected_text}'", callback=self.view_screens)
+        else:
+            self.output_area.append("Wybierz port z listy, aby uruchomić screen.")
 
     def view_screens(self):
         self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -ls'")
@@ -304,8 +309,10 @@ class StatusTab(QWidget):
     def stop_screen(self):
         selected = self.screen_list.currentItem()
         if selected:
-            screen_name = selected.text().split('.')[0]
+            screen_name = selected.text().split('.')[0].strip()
             self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S {screen_name} -X quit'", callback=self.view_screens)
+        else:
+            self.output_area.append("Wybierz screen z listy, aby go zatrzymać.")
 
     def start_autonomy(self):
         self.run_ansible(
@@ -315,11 +322,10 @@ class StatusTab(QWidget):
 
     def start_gps_callback(self):
         selected = self.port_list.currentItem()
-        selected = selected.text().split(" ")
-        selected = selected[0]
         if selected:
+            selected_text = selected.text().split(" ")[0]
             self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected.replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected}'"
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected_text.replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected_text}'"
             )
             self.run_ansible(
                 f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_magnetometr {config.START_MAGNETOMETR}'"
@@ -328,16 +334,19 @@ class StatusTab(QWidget):
                 f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_targets_to_yaml {config.START_TARGETS_TO_YAML}'",
                 callback=self.view_screens
             )
+        else:
+            self.output_area.append("Wybierz port z listy, aby uruchomić GPS.")
 
     def start_satel_callback(self):
         selected = self.port_list.currentItem()
-        selected = selected.text().split(" ")
-        selected = selected[0]
         if selected:
+            selected_text = selected.text().split(" ")[0]
             self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS SATEL_{selected.replace('/dev/', '')} {config.START_SATEL_DECODER} {selected}'",
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS SATEL_{selected_text.replace('/dev/', '')} {config.START_SATEL_DECODER} {selected_text}'",
                 callback=self.view_screens
             )
+        else:
+            self.output_area.append("Wybierz port z listy, aby uruchomić SATEL Decoder.")
 
     def start_science_backup_callback(self):
         self.run_ansible(
@@ -348,9 +357,9 @@ class StatusTab(QWidget):
     def show_ports_details_callback(self):
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '{config.PORT_DETAILS_PY_SCRIPT}'",
-            output=self.show_logs
+            output_func=self.show_logs
         )
-    
+        
     def start_autonomy_drive(self):
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS AutonomyDrive {config.AUTONOMY_DRIVE_SCRIPT}'",
@@ -372,23 +381,25 @@ class StatusTab(QWidget):
     def fetch_logs(self):
         selected = self.screen_list.currentItem()
         if selected:
-            screen_name = selected.text().split('.')[0]
+            screen_name = selected.text().split('.')[0].strip()
             self.run_ansible(
                 f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S {screen_name} -X hardcopy -h /tmp/{screen_name}_log && tail -n 200 /tmp/{screen_name}_log'",
-                output=self.show_logs
+                output_func=self.show_logs
             )
+        else:
+            self.output_area.append("Wybierz screen z listy, aby pobrać logi.")
             
     def show_logs(self, text):
         dialog = QDialog(self)
         dialog.setWindowTitle(f"Logi agenta")
-        dialog.resize(600, 400)  # Powiększone okno
+        dialog.resize(600, 400)
         
         dialog_layout = QVBoxLayout()
         
         log_viewer = QTextEdit()
         log_viewer.setReadOnly(True)
         log_viewer.setPlainText(text)
-        log_viewer.setMinimumSize(580, 380)  # Ograniczenie minimalnego rozmiaru
+        log_viewer.setMinimumSize(580, 380)
         log_viewer.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         
         dialog_layout.addWidget(log_viewer)
@@ -398,45 +409,63 @@ class StatusTab(QWidget):
     def wipe_dead_sceens(self):
         self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -wipe'")
 
-
-    def cleanup_thread(self, thread, callback):
-        if thread in self.threads:
-            self.threads.remove(thread)  # Usunięcie zakończonego wątku
-        if callback:
-            callback()  # Jeśli przekazano callback, wykonaj go po zakończeniu wątku
-
     def display_output(self, text):
         self.output_area.append(text)
         
         if "/dev/tty" in text:
             self.port_list.clear()
-            ports = [p for p in text.strip().split("\n") if p.startswith("/")]
+            ports = [p.strip() for p in text.strip().split("\n") if p.startswith("/dev/")]
             self.port_list.addItems(ports)
         
-        if "Attached" in text or "Detached" in text:
+        if "Attached" in text or "Detached" in text or "No Sockets found" in text:
             self.screen_list.clear()
-            screens = [line.split('\t')[1] for line in text.strip().split("\n") if "tached" in line]
+            screens = []
+            for line in text.strip().split("\n"):
+                if "tached" in line:
+                    parts = line.split('\t')
+                    if len(parts) > 1:
+                        screen_info = parts[1].strip()
+                        screens.append(screen_info)
             self.screen_list.addItems(screens)
-
+            
         if "No Sockets found" in text:
             self.screen_list.clear()
 
-    def run_ansible(self, command, callback=None, output=None):
-        if output is None:
-            output = self.display_output  # Przekazanie metody instancji
+    def run_ansible(self, command, callback=None, output_func=None):
+        # Zwiększamy licznik aktywnych zadań
+        self.active_ansible_tasks += 1
+        # Ustawiamy kursor ładowania, jeśli to pierwsze aktywne zadanie
+        if self.active_ansible_tasks == 1:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        
+        if output_func is None:
+            output_func = self.display_output
 
-        thread = AnsibleThread(command)
-        thread.output.connect(lambda text: output(text))
-        thread.finished.connect(lambda: self.cleanup_thread(thread, callback))
-        self.threads.append(thread)  # Dodanie wątku do listy
-        thread.start()
-    
+        ansible_signals = AnsibleSignals()
+        ansible_signals.output.connect(output_func)
+        ansible_signals.finished.connect(lambda: self.on_ansible_task_finished(callback))
+        ansible_signals.error.connect(lambda msg: self.output_area.append(f"Błąd zadania: {msg}"))
+
+        task = AnsibleTask(command, ansible_signals)
+        self.threadpool.start(task)
+
+    def on_ansible_task_finished(self, callback):
+        # Zmniejszamy licznik aktywnych zadań
+        self.active_ansible_tasks -= 1
+        
+        # Przywracamy domyślny kursor tylko, gdy wszystkie zadania się skończyły
+        if self.active_ansible_tasks == 0:
+            QApplication.restoreOverrideCursor()
+        
+        if callback:
+            callback()
+
+    # <<< PRZYWRÓCONA METODA reset_everything >>>
     def reset_everything(self):
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '/home/legendary/kubatk/unplug_URC.sh' --become",
             callback=self.view_screens
         )
-
 
 # Kod uruchamiający aplikację
 if __name__ == '__main__':
