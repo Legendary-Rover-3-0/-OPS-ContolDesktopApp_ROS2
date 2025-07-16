@@ -55,37 +55,61 @@ class StatusTab(QWidget):
         self.refresh_button.clicked.connect(self.get_ports)
         ports_layout.addWidget(self.refresh_button)
 
+                
         self.start_agent_screen_button = QPushButton("🚀 Uruchom Agent MicroROS")
         self.start_agent_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
         ports_layout.addWidget(self.start_agent_screen_button)
-        ports_layout.addStretch(20)
 
+        # Tworzymy kontener na przyciski w dwóch kolumnach
+        buttons_container = QWidget()
+        buttons_layout = QHBoxLayout()
+        buttons_container.setLayout(buttons_layout)
+
+        # Pierwsza kolumna przycisków
+
+        left_column = QVBoxLayout()
         self.unplug_and_plug_button = QPushButton("🔌 Zresetuj Wszytkie Porty")
         self.unplug_and_plug_button.clicked.connect(self.reset_everything)
-        ports_layout.addWidget(self.unplug_and_plug_button)
-        ports_layout.addStretch(20)
+        left_column.addWidget(self.unplug_and_plug_button)
 
         self.start_autonomy_button = QPushButton("🤖 Uruchom autonomie (baza)")
         self.start_autonomy_button.clicked.connect(self.start_autonomy)
-        ports_layout.addWidget(self.start_autonomy_button)
+        left_column.addWidget(self.start_autonomy_button)
 
         self.start_gps = QPushButton("🛰️ Uruchom GPS")
         self.start_gps.clicked.connect(self.start_gps_callback)
-        ports_layout.addWidget(self.start_gps)
-        ports_layout.addStretch(100)
+        left_column.addWidget(self.start_gps)
 
+        self.auto_stop_button = QPushButton("⏹️ AutoStop")
+        self.auto_stop_button.clicked.connect(self.auto_stop_callback) 
+        left_column.addWidget(self.auto_stop_button)
+
+        # Druga kolumna przycisków
+        right_column = QVBoxLayout()
         self.start_satel = QPushButton("📻 Uruchom SATEL Decoder")
         self.start_satel.clicked.connect(self.start_satel_callback)
-        ports_layout.addWidget(self.start_satel)
+        right_column.addWidget(self.start_satel)
 
         self.start_science_backup = QPushButton("🧪 Uruchom Science Backup")
         self.start_science_backup.clicked.connect(self.start_science_backup_callback)
-        ports_layout.addWidget(self.start_science_backup)
+        right_column.addWidget(self.start_science_backup)
 
         self.show_ports_details = QPushButton("📋 Pokaz porty szeregowe")
         self.show_ports_details.clicked.connect(self.show_ports_details_callback)
-        ports_layout.addWidget(self.show_ports_details)
+        right_column.addWidget(self.show_ports_details)
 
+        self.empty_button = QPushButton("                  ")
+        #self.empty_butto.clicked.connect(self.auto_stop_callback)
+        right_column.addWidget(self.empty_button)
+
+        # Dodanie kolumn do kontenera
+        buttons_layout.addLayout(left_column)
+        buttons_layout.addLayout(right_column)
+        buttons_layout.addStretch()
+
+        # Dodanie kontenera z przyciskami do głównego layoutu
+        ports_layout.addWidget(buttons_container)
+        ports_layout.addStretch(100)
 
         # Screeny
         screens_layout = QVBoxLayout()
@@ -336,6 +360,12 @@ class StatusTab(QWidget):
     def stop_autonomy_drive(self):
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S AutonomyDrive -X quit'",
+            callback=self.view_screens
+        )
+
+    def auto_stop_callback(self):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS AutoStop {config.AUTOSTOP_SCRIPT}'",
             callback=self.view_screens
         )
 
