@@ -55,8 +55,6 @@ class StatusTab(QWidget):
         layout.addSpacing(10)
 
         #Listy portow i screenow
-
-            #Porty
         list_layout = QHBoxLayout()
 
         ports_layout = QVBoxLayout()
@@ -81,7 +79,7 @@ class StatusTab(QWidget):
         # Pierwsza kolumna przycisków
         left_column = QVBoxLayout()
         self.unplug_and_plug_button = QPushButton("🔌 Zresetuj Wszytkie Porty")
-        self.unplug_and_plug_button.clicked.connect(self.reset_everything)
+        self.unplug_and_plug_button.clicked.connect(self.reset_everything) # <<< Tutaj jest podłączenie
         left_column.addWidget(self.unplug_and_plug_button)
 
         self.start_autonomy_button = QPushButton("🤖 Uruchom autonomie (baza)")
@@ -93,7 +91,7 @@ class StatusTab(QWidget):
         left_column.addWidget(self.start_gps)
 
         self.auto_stop_button = QPushButton("⏹️ AutoStop")
-        self.auto_stop_button.clicked.connect(self.auto_stop_callback) 
+        self.auto_stop_button.clicked.connect(self.auto_stop_callback)  
         left_column.addWidget(self.auto_stop_button)
 
         # Druga kolumna przycisków
@@ -150,52 +148,6 @@ class StatusTab(QWidget):
         list_layout.addLayout(screens_layout)
         layout.addLayout(list_layout)
         layout.addSpacing(20)
-
-        
-
-        # #guziki start sceenów
-
-        # start_screen_buttons_layout = QHBoxLayout()
-        
-        # self.start_drive_screen_button = QPushButton("Jazda 💨")
-        # self.start_drive_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
-        # start_screen_buttons_layout.addWidget(self.start_drive_screen_button)
-
-        # self.start_mani_screen_button = QPushButton("Manipulator 🦾")
-        # self.start_mani_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
-        # start_screen_buttons_layout.addWidget(self.start_mani_screen_button)
-
-        # self.start_science_screen_button = QPushButton("Science 🧪")
-        # self.start_science_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
-        # start_screen_buttons_layout.addWidget(self.start_science_screen_button)
-
-        # self.start_RFID_screen_button = QPushButton("RFID 💳")
-        # self.start_RFID_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
-        # start_screen_buttons_layout.addWidget(self.start_RFID_screen_button)
-
-        # self.start_GPS_screen_button = QPushButton("GPS 🛰️")
-        # self.start_GPS_screen_button.clicked.connect(lambda _: self.start_screen(config.AGENT_START_SCRIPT))
-        # start_screen_buttons_layout.addWidget(self.start_GPS_screen_button)
-
-        # layout.addLayout(start_screen_buttons_layout) 
-
-
-        # #guziki sceeny
-        # screen_buttons_layout = QHBoxLayout()
-
-        # self.stop_screen_button = QPushButton("Zatrzymaj wybrany screen")
-        # self.stop_screen_button.clicked.connect(self.stop_screen)
-        # screen_buttons_layout.addWidget(self.stop_screen_button)
-
-        # self.fetch_logs_button = QPushButton("Pobierz logi z wybranego screena")
-        # self.fetch_logs_button.clicked.connect(self.fetch_logs)
-        # screen_buttons_layout.addWidget(self.fetch_logs_button)
-
-        # self.wipe_dead_button = QPushButton("Usuń martwe procesy")
-        # self.wipe_dead_button.clicked.connect(self.wipe_dead_sceens)
-        # screen_buttons_layout.addWidget(self.wipe_dead_button)
-
-        # layout.addLayout(screen_buttons_layout) 
 
         # Guziki wizja
         vision_buttons_layout = QHBoxLayout()
@@ -273,21 +225,6 @@ class StatusTab(QWidget):
             f"",
             callback=self.view_screens
         )
-
-
-    # def fetch_vision_logs(self):
-    #     """Pobiera logi z ekranu wizja."""
-    #     self.run_ansible(
-    #         f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S wizja -X hardcopy -h /tmp/wizja_log && tail -n 200 /tmp/wizja_log'",
-    #         output=self.show_logs
-    #     )
-
-    # def stop_vision_screen(self):
-    #     """Zatrzymuje proces w ekranie wizja poprzez wysłanie Ctrl+C."""
-    #     self.run_ansible(
-    #         f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S wizja -X stuff \"\\003\"'"
-    #     )
-
 
     def get_selected_group(self):
         return self.group_selector.currentText()
