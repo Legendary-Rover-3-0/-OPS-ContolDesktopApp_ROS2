@@ -82,10 +82,6 @@ class StatusTab(QWidget):
         self.unplug_and_plug_button.clicked.connect(self.reset_everything) # <<< Tutaj jest podłączenie
         left_column.addWidget(self.unplug_and_plug_button)
 
-        self.start_autonomy_button = QPushButton("🤖 Uruchom autonomie (baza)")
-        self.start_autonomy_button.clicked.connect(self.start_autonomy)
-        left_column.addWidget(self.start_autonomy_button)
-
         self.start_gps = QPushButton("🛰️ Uruchom GPS")
         self.start_gps.clicked.connect(self.start_gps_callback)
         left_column.addWidget(self.start_gps)
@@ -95,24 +91,37 @@ class StatusTab(QWidget):
         left_column.addWidget(self.auto_stop_button)
 
         # Druga kolumna przycisków
-        right_column = QVBoxLayout()
+        center_column = QVBoxLayout()
         self.start_satel = QPushButton("📻 Uruchom SATEL Decoder")
         self.start_satel.clicked.connect(self.start_satel_callback)
-        right_column.addWidget(self.start_satel)
+        center_column.addWidget(self.start_satel)
 
         self.start_science_backup = QPushButton("🧪 Uruchom Science Backup")
         self.start_science_backup.clicked.connect(self.start_science_backup_callback)
-        right_column.addWidget(self.start_science_backup)
+        center_column.addWidget(self.start_science_backup)
 
         self.show_ports_details = QPushButton("📋 Pokaz porty szeregowe")
         self.show_ports_details.clicked.connect(self.show_ports_details_callback)
-        right_column.addWidget(self.show_ports_details)
+        center_column.addWidget(self.show_ports_details)
 
-        self.empty_button = QPushButton("            ")
-        right_column.addWidget(self.empty_button)
+        # self.empty_button = QPushButton("            ")
+        # center_column.addWidget(self.empty_button)
+
+        # Trzecia kolumna przyciskow
+        right_column = QVBoxLayout()
+        self.start_autonomy_button = QPushButton("🤖 Autonomia Baza")
+        self.start_autonomy_button.clicked.connect(self.start_autonomy)
+        right_column.addWidget(self.start_autonomy_button)
+
+        self.start_autonomy_script1_button = QPushButton("🏃 Autonomia Tunel")
+        self.start_autonomy_script1_button.clicked.connect(self.start_autonomy_script1)
+        right_column.addWidget(self.start_autonomy_script1_button)
+
+        right_column.addStretch()
 
         # Dodanie kolumn do kontenera
         buttons_layout.addLayout(left_column)
+        buttons_layout.addLayout(center_column)
         buttons_layout.addLayout(right_column)
         buttons_layout.addStretch()
 
@@ -135,13 +144,17 @@ class StatusTab(QWidget):
         self.fetch_logs_button.clicked.connect(self.fetch_logs)
         screens_layout.addWidget(self.fetch_logs_button)
 
-        self.stop_screen_button = QPushButton("🛑 Zatrzymaj wybrany screen")
+        self.stop_screen_button = QPushButton("🛑 Zatrzymaj wybrany screen (CRTL C)")
         self.stop_screen_button.clicked.connect(self.stop_screen)
         screens_layout.addWidget(self.stop_screen_button)
 
-        self.wipe_dead_button = QPushButton("🗑️ Usuń martwe procesy")
-        self.wipe_dead_button.clicked.connect(self.wipe_dead_sceens)
-        screens_layout.addWidget(self.wipe_dead_button)
+        self.hard_stop_screen_button = QPushButton("☠️ Zabij proces w screenie (w ostatecznosci)")
+        self.hard_stop_screen_button.clicked.connect(self.hard_stop_screen)
+        screens_layout.addWidget(self.hard_stop_screen_button)
+
+        # self.wipe_dead_button = QPushButton("🗑️ Usuń martwe procesy")
+        # self.wipe_dead_button.clicked.connect(self.wipe_dead_sceens)
+        # screens_layout.addWidget(self.wipe_dead_button)
 
         list_layout.addLayout(ports_layout)
         list_layout.addSpacing(10)
@@ -247,13 +260,31 @@ class StatusTab(QWidget):
         selected = self.screen_list.currentItem()
         if selected:
             screen_name = selected.text().split('.')[0].strip()
+            #self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S {screen_name} -X quit'", callback=self.view_screens)
+            self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S {screen_name} -X stuff $\"\\003\"'", callback=self.view_screens)
+
+        else:
+            self.output_area.append("Wybierz screen z listy, aby go zatrzymać.")
+
+    def hard_stop_screen(self):
+        selected = self.screen_list.currentItem()
+        if selected:
+            screen_name = selected.text().split('.')[0].strip()
             self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S {screen_name} -X quit'", callback=self.view_screens)
+            #self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -S {screen_name} -X stuff $\"\\003\"'", callback=self.view_screens)
+
         else:
             self.output_area.append("Wybierz screen z listy, aby go zatrzymać.")
 
     def start_autonomy(self):
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS AutonomyBase {config.AUTONOMY_BASE_SCRIPT}'",
+            callback=self.view_screens
+        )
+
+    def start_autonomy_script1(self):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS AutonomyTunel {config.AUTONOMY_SCRIPT1}'",
             callback=self.view_screens
         )
 
@@ -343,8 +374,8 @@ class StatusTab(QWidget):
         dialog.setLayout(dialog_layout)
         dialog.exec()
 
-    def wipe_dead_sceens(self):
-        self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -wipe'")
+    # def wipe_dead_sceens(self):
+    #     self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -wipe'")
 
     def display_output(self, text):
         self.output_area.append(text)

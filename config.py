@@ -12,9 +12,12 @@ BUTTON_SELECTED_COLOR = "blue"
 ANSIBLE_INVENTORY = "ansible_inventory.ini"
 AGENT_START_SCRIPT = "/home/legendary/kubatk/drive.sh" # skrypt musi pobierać 1 parametr (np: /dev/ttyUSB0)
 UNPLUG_PLUG_SCRIPT = "/home/legendary/kubatk/unplug.sh" #skrypt musi pobierać 1 parametr
-AUTONOMY_BASE_SCRIPT = "/home/legendary/kubatk/autonomy.sh"
+
+AUTONOMY_BASE_SCRIPT = "/home/legendary/kubatk/autonomy.sh" # Baza: lidar i te inne
+AUTONOMY_SCRIPT1 = "/home/legendary/kubatk/autonomyTunel.sh" # Tunel
 #AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/autonomydrive.sh"
-AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/test.sh"
+#AUTONOMY_DRIVE_SCRIPT = "/home/legendary/kubatk/test.sh"
+
 START_GPS_SCRIPT = "/home/legendary/kubatk/gps.sh" # potrzebny parametr (port GPS)
 START_TARGETS_TO_YAML = "/home/legendary/kubatk/gps_targets.sh" # TODO
 START_SATEL_DECODER = "/home/legendary/kubatk/start_satel.sh" # potrzebny parametr port # TODO

@@ -258,10 +258,10 @@ class MainWindow(QMainWindow):
             time.sleep(0.05)
 
         # Uruchomienie skryptu jazdy autonomicznej
-        if self.autonomy_state:
-            self.status_tab.start_autonomy_drive()
-        else:
-            self.status_tab.stop_autonomy_drive()
+        # if self.autonomy_state:
+        #     self.status_tab.start_autonomy_drive()
+        # else:
+        #     self.status_tab.stop_autonomy_drive()
 
     def toggle_manual_callback(self):
         # Wylaczenie skryptu jazdy autonomicznej
