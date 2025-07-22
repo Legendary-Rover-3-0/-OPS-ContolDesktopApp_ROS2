@@ -117,6 +117,10 @@ class StatusTab(QWidget):
         self.start_autonomy_script1_button.clicked.connect(self.start_autonomy_script1)
         right_column.addWidget(self.start_autonomy_script1_button)
 
+        self.magnetometr_button = QPushButton("Magnetometr")
+        self.magnetometr_button.clicked.connect(self.magnetometr_callback)
+        right_column.addWidget(self.magnetometr_button)
+
         right_column.addStretch()
 
         # Dodanie kolumn do kontenera
@@ -346,6 +350,13 @@ class StatusTab(QWidget):
             callback=self.view_screens
         )
 
+    def magnetometr_callback(self):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS Magnetometr {config.START_MAGNETOMETR}'",
+            callback=self.view_screens
+        )
+
+
     def fetch_logs(self):
         selected = self.screen_list.currentItem()
         if selected:
@@ -434,6 +445,7 @@ class StatusTab(QWidget):
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '/home/legendary/kubatk/unplug_URC.sh' --become",
             callback=self.view_screens
         )
+        
 
 # Kod uruchamiający aplikację
 if __name__ == '__main__':
