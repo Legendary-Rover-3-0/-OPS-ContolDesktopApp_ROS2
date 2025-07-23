@@ -79,16 +79,22 @@ class StatusTab(QWidget):
         # Pierwsza kolumna przycisków
         left_column = QVBoxLayout()
         self.unplug_and_plug_button = QPushButton("🔌 Zresetuj Wszytkie Porty")
-        self.unplug_and_plug_button.clicked.connect(self.reset_everything) # <<< Tutaj jest podłączenie
+        self.unplug_and_plug_button.clicked.connect(self.reset_everything)
         left_column.addWidget(self.unplug_and_plug_button)
 
-        self.start_gps = QPushButton("🛰️ Uruchom GPS")
-        self.start_gps.clicked.connect(self.start_gps_callback)
-        left_column.addWidget(self.start_gps)
+        self.unplug_and_plug_hub_button = QPushButton("⛔ Odłącz Huba")
+        self.unplug_and_plug_hub_button.clicked.connect(lambda: self.set_gpio_state(0)) 
+        left_column.addWidget(self.unplug_and_plug_hub_button)
+
+        self.unplug_and_plug_hub_button = QPushButton("✅ Podłącz Huba")
+        self.unplug_and_plug_hub_button.clicked.connect(lambda: self.set_gpio_state(1)) 
+        left_column.addWidget(self.unplug_and_plug_hub_button)
 
         self.auto_stop_button = QPushButton("⏹️ AutoStop")
         self.auto_stop_button.clicked.connect(self.auto_stop_callback)  
         left_column.addWidget(self.auto_stop_button)
+
+        left_column.addStretch()
 
         # Druga kolumna przycisków
         center_column = QVBoxLayout()
@@ -104,6 +110,8 @@ class StatusTab(QWidget):
         self.show_ports_details.clicked.connect(self.show_ports_details_callback)
         center_column.addWidget(self.show_ports_details)
 
+        center_column.addStretch()
+
         # self.empty_button = QPushButton("            ")
         # center_column.addWidget(self.empty_button)
 
@@ -117,7 +125,11 @@ class StatusTab(QWidget):
         self.start_autonomy_script1_button.clicked.connect(self.start_autonomy_script1)
         right_column.addWidget(self.start_autonomy_script1_button)
 
-        self.magnetometr_button = QPushButton("Magnetometr")
+        self.start_gps = QPushButton("🛰️ Uruchom GPS")
+        self.start_gps.clicked.connect(self.start_gps_callback)
+        right_column.addWidget(self.start_gps)
+
+        self.magnetometr_button = QPushButton("🧭 Magnetometr")
         self.magnetometr_button.clicked.connect(self.magnetometr_callback)
         right_column.addWidget(self.magnetometr_button)
 
@@ -331,6 +343,12 @@ class StatusTab(QWidget):
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '{config.PORT_DETAILS_PY_SCRIPT}'",
             output_func=self.show_logs
         )
+
+    def set_gpio_state(self, state):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '{config.GPIO_RESET} {state}'",
+            callback=self.view_screens
+        )   
         
     def start_autonomy_drive(self):
         self.run_ansible(
@@ -439,12 +457,12 @@ class StatusTab(QWidget):
         if callback:
             callback()
 
-    # <<< PRZYWRÓCONA METODA reset_everything >>>
     def reset_everything(self):
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a '/home/legendary/kubatk/unplug_URC.sh' --become",
             callback=self.view_screens
         )
+
         
 
 # Kod uruchamiający aplikację

@@ -25,6 +25,7 @@ START_SCIENCE_BACKUP = "" # TODO wrzuci ale gotowy
 PORT_DETAILS_PY_SCRIPT = "/home/legendary/kubatk/show_ports.sh"
 START_MAGNETOMETR = "/home/legendary/kubatk/magnetometr.sh"
 AUTOSTOP_SCRIPT = "/home/legendary/Legendary_Wolverine/legendary_wolverine/Autostop/AutoStop.sh"
+GPIO_RESET = "/home/legendary/kubatk/gpio/turecki_unplug.sh"
 
 # Manipulator
 MANI_DEFAULT_VALUE = 100.0
