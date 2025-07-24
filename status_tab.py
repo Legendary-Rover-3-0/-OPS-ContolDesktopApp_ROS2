@@ -1,6 +1,6 @@
 import sys
 import subprocess
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QListWidget, QHBoxLayout, QComboBox, QDialog
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QListWidget, QHBoxLayout, QComboBox, QDialog, QCheckBox
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QRunnable, QThreadPool, QObject
 import config
 import os
@@ -407,20 +407,38 @@ class StatusTab(QWidget):
             
     def show_logs(self, text):
         dialog = QDialog(self)
-        dialog.setWindowTitle(f"Logi agenta")
-        dialog.resize(600, 400)
-        
+        dialog.setWindowTitle("Logi agenta")
+        dialog.resize(600, 450)
+
         dialog_layout = QVBoxLayout()
         
+        # Pole tekstowe
         log_viewer = QTextEdit()
         log_viewer.setReadOnly(True)
         log_viewer.setPlainText(text)
         log_viewer.setMinimumSize(580, 380)
         log_viewer.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         
+        # Checkbox
+        filter_checkbox = QCheckBox("Pokaż tylko linie zawierające 'error'")
+        
+        # Funkcja filtra
+        def update_log_view():
+            if filter_checkbox.isChecked():
+                filtered_lines = "\n".join(
+                    line for line in text.splitlines() if "error" in line.lower()
+                )
+                log_viewer.setPlainText(filtered_lines)
+            else:
+                log_viewer.setPlainText(text)
+
+        filter_checkbox.stateChanged.connect(update_log_view)
+
+        dialog_layout.addWidget(filter_checkbox)
         dialog_layout.addWidget(log_viewer)
         dialog.setLayout(dialog_layout)
         dialog.exec()
+
 
     # def wipe_dead_sceens(self):
     #     self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -wipe'")
