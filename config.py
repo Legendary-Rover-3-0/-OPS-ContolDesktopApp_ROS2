@@ -26,6 +26,7 @@ PORT_DETAILS_PY_SCRIPT = "/home/legendary/kubatk/show_ports.sh"
 START_MAGNETOMETR = "/home/legendary/kubatk/magnetometr.sh"
 AUTOSTOP_SCRIPT = "/home/legendary/Legendary_Wolverine/legendary_wolverine/Autostop/AutoStop.sh"
 GPIO_RESET = "/home/legendary/kubatk/gpio/turecki_unplug.sh"
+START_GPS_RTK_SCRIPT_ARC = "/home/legendary/kubatk/gps_ARC.sh"
 
 # Manipulator
 MANI_DEFAULT_VALUE = 100.0
@@ -38,15 +39,18 @@ CAMERA_2_HANDLE = "/dev/video2"
 CAMERA_3_HANDLE = "/dev/video4"
 CAMERA_4_HANDLE = "/dev/video6"
 
-CAMERA_1_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_1_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! textoverlay text=\\\"Kamera 1\\\" valignment=top halignment=left font-desc=\\\"Sans, 18\\\" ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=6123"
-CAMERA_2_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_2_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! textoverlay text=\\\"Kamera 2\\\" valignment=top halignment=left font-desc=\\\"Sans, 18\\\" ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=7123"
-CAMERA_3_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_3_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! textoverlay text=\\\"Kamera 3\\\" valignment=top halignment=left font-desc=\\\"Sans, 18\\\" ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=8123"
-CAMERA_4_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_4_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! textoverlay text=\\\"Kamera 4\\\" valignment=top halignment=left font-desc=\\\"Sans, 18\\\" ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=9123"
+CAMERA_TITLES = True
 
-# CAMERA_2_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_2_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=7123"
-# CAMERA_1_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_1_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=6123"
-# CAMERA_3_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_3_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=8123"
-# CAMERA_4_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_4_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=9123"
+if CAMERA_TITLES:
+    CAMERA_1_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_1_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! textoverlay text=\\\"Kamera 1\\\" valignment=top halignment=left font-desc=\\\"Sans, 18\\\" ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=6123"
+    CAMERA_2_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_2_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! textoverlay text=\\\"Kamera 2\\\" valignment=top halignment=left font-desc=\\\"Sans, 18\\\" ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=7123"
+    CAMERA_3_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_3_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! textoverlay text=\\\"Kamera 3\\\" valignment=top halignment=left font-desc=\\\"Sans, 18\\\" ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=8123"
+    CAMERA_4_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_4_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! textoverlay text=\\\"Kamera 4\\\" valignment=top halignment=left font-desc=\\\"Sans, 18\\\" ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=9123"
+else:
+    CAMERA_2_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_2_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=7123"
+    CAMERA_1_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_1_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=6123"
+    CAMERA_3_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_3_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=8123"
+    CAMERA_4_CMD = f"gst-launch-1.0 -e v4l2src device={CAMERA_4_HANDLE} ! image/jpeg,width=1280,height=720,framerate=30/1 ! jpegparse ! jpegdec ! videoconvert ! x264enc tune=zerolatency bitrate=1000 speed-preset=superfast ! rtph264pay ! udpsink host={CAM_RECIVER_IP} port=9123"
 
 
 # Science

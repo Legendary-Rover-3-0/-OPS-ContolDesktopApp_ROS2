@@ -125,9 +125,13 @@ class StatusTab(QWidget):
         self.start_autonomy_script1_button.clicked.connect(self.start_autonomy_script1)
         right_column.addWidget(self.start_autonomy_script1_button)
 
-        self.start_gps = QPushButton("🛰️ Uruchom GPS")
+        self.start_gps = QPushButton("🛰️ Uruchom GPS (stary)")
         self.start_gps.clicked.connect(self.start_gps_callback)
         right_column.addWidget(self.start_gps)
+
+        self.start_gps_rtk = QPushButton("🛰️ Uruchom GPS (RTK)")
+        self.start_gps_rtk.clicked.connect(self.start_gps_rtk_callback)
+        right_column.addWidget(self.start_gps_rtk)
 
         self.magnetometr_button = QPushButton("🧭 Magnetometr")
         self.magnetometr_button.clicked.connect(self.magnetometr_callback)
@@ -309,17 +313,32 @@ class StatusTab(QWidget):
         if selected:
             selected_text = selected.text().split(" ")[0]
             self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected_text.replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected_text}'"
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected_text.replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected_text}'",
+                callback=self.view_screens
             )
+            # self.run_ansible(
+            #     f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_magnetometr {config.START_MAGNETOMETR}'"
+            # )
+            # self.run_ansible(
+            #     f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_targets_to_yaml {config.START_TARGETS_TO_YAML}'",
+            #     callback=self.view_screens
+            # )
+        else:
+            self.output_area.append("Wybierz port z listy, aby uruchomić GPS.")
+
+    def start_gps_rtk_callback(self):
+        selected = self.port_list.currentItem()
+        if selected:
+            selected_text = selected.text().split(" ")[0]
             self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_magnetometr {config.START_MAGNETOMETR}'"
-            )
-            self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_targets_to_yaml {config.START_TARGETS_TO_YAML}'",
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected_text.replace('/dev/', '')} {config.START_GPS_RTK_SCRIPT_ARC} {selected_text}'",
                 callback=self.view_screens
             )
         else:
             self.output_area.append("Wybierz port z listy, aby uruchomić GPS.")
+
+
+            # ros2_gps_topic_without_gps_file.py 
 
     def start_satel_callback(self):
         selected = self.port_list.currentItem()
