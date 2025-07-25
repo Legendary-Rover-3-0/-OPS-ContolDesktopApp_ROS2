@@ -110,6 +110,10 @@ class StatusTab(QWidget):
         self.show_ports_details.clicked.connect(self.show_ports_details_callback)
         center_column.addWidget(self.show_ports_details)
 
+        self.ledy_tur_tur = QPushButton("🪩💃🕺🎶 Ledy Tür Tür")
+        self.ledy_tur_tur.clicked.connect(self.ledy_tur_tur_callback)
+        center_column.addWidget(self.ledy_tur_tur)
+
         center_column.addStretch()
 
         # self.empty_button = QPushButton("            ")
@@ -335,6 +339,12 @@ class StatusTab(QWidget):
     def start_science_backup_callback(self):
         self.run_ansible(
             f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS Science_backup {config.START_SCIENCE_BACKUP}'",
+            callback=self.view_screens
+        )
+
+    def ledy_tur_tur_callback(self):
+        self.run_ansible(
+            f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS Ledy {config.START_LEDY_TUR_TUR}'",
             callback=self.view_screens
         )
 

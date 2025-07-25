@@ -26,12 +26,13 @@ PORT_DETAILS_PY_SCRIPT = "/home/legendary/kubatk/show_ports.sh"
 START_MAGNETOMETR = "/home/legendary/kubatk/magnetometr.sh"
 AUTOSTOP_SCRIPT = "/home/legendary/Legendary_Wolverine/legendary_wolverine/Autostop/AutoStop.sh"
 GPIO_RESET = "/home/legendary/kubatk/gpio/turecki_unplug.sh"
+START_LEDY_TUR_TUR = "/home/legendary/kubatk/ledy_tur_tur.sh"
 
 # Manipulator
 MANI_DEFAULT_VALUE = 100.0
 
 # Wizja
-CAM_RECIVER_IP = "192.168.2.10"
+CAM_RECIVER_IP = "192.168.2.40"
 
 CAMERA_1_HANDLE = "/dev/video0"
 CAMERA_2_HANDLE = "/dev/video2"
