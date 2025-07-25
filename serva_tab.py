@@ -17,8 +17,8 @@ class ServaTab(QWidget):
         self.running = False
         self.is_gamepad_active = False
         
-        self.servo_positions = [84, 90, 90, 90]
-        self.step_values = [15, 15, 10, 10]
+        self.servo_positions = [88, 90, 90, 90]
+        self.step_values = [15, 15, 10, 90]
         self.first_servo = 84
         
         # Ograniczenia dla serwa 360°
