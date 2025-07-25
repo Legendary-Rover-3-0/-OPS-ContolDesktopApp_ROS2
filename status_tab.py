@@ -1,6 +1,6 @@
 import sys
 import subprocess
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QListWidget, QHBoxLayout, QComboBox, QDialog
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QListWidget, QHBoxLayout, QComboBox, QDialog, QCheckBox
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QRunnable, QThreadPool, QObject
 import config
 import os
@@ -129,9 +129,13 @@ class StatusTab(QWidget):
         self.start_autonomy_script1_button.clicked.connect(self.start_autonomy_script1)
         right_column.addWidget(self.start_autonomy_script1_button)
 
-        self.start_gps = QPushButton("🛰️ Uruchom GPS")
+        self.start_gps = QPushButton("🛰️ Uruchom GPS (stary)")
         self.start_gps.clicked.connect(self.start_gps_callback)
         right_column.addWidget(self.start_gps)
+
+        self.start_gps_rtk = QPushButton("🛰️ Uruchom GPS (RTK)")
+        self.start_gps_rtk.clicked.connect(self.start_gps_rtk_callback)
+        right_column.addWidget(self.start_gps_rtk)
 
         self.magnetometr_button = QPushButton("🧭 Magnetometr")
         self.magnetometr_button.clicked.connect(self.magnetometr_callback)
@@ -313,17 +317,32 @@ class StatusTab(QWidget):
         if selected:
             selected_text = selected.text().split(" ")[0]
             self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected_text.replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected_text}'"
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected_text.replace('/dev/', '')} {config.START_GPS_SCRIPT} {selected_text}'",
+                callback=self.view_screens
             )
+            # self.run_ansible(
+            #     f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_magnetometr {config.START_MAGNETOMETR}'"
+            # )
+            # self.run_ansible(
+            #     f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_targets_to_yaml {config.START_TARGETS_TO_YAML}'",
+            #     callback=self.view_screens
+            # )
+        else:
+            self.output_area.append("Wybierz port z listy, aby uruchomić GPS.")
+
+    def start_gps_rtk_callback(self):
+        selected = self.port_list.currentItem()
+        if selected:
+            selected_text = selected.text().split(" ")[0]
             self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_magnetometr {config.START_MAGNETOMETR}'"
-            )
-            self.run_ansible(
-                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_targets_to_yaml {config.START_TARGETS_TO_YAML}'",
+                f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -dmS GPS_{selected_text.replace('/dev/', '')} {config.START_GPS_RTK_SCRIPT_ARC} {selected_text}'",
                 callback=self.view_screens
             )
         else:
             self.output_area.append("Wybierz port z listy, aby uruchomić GPS.")
+
+
+            # ros2_gps_topic_without_gps_file.py 
 
     def start_satel_callback(self):
         selected = self.port_list.currentItem()
@@ -398,20 +417,38 @@ class StatusTab(QWidget):
             
     def show_logs(self, text):
         dialog = QDialog(self)
-        dialog.setWindowTitle(f"Logi agenta")
-        dialog.resize(600, 400)
-        
+        dialog.setWindowTitle("Logi agenta")
+        dialog.resize(600, 450)
+
         dialog_layout = QVBoxLayout()
         
+        # Pole tekstowe
         log_viewer = QTextEdit()
         log_viewer.setReadOnly(True)
         log_viewer.setPlainText(text)
         log_viewer.setMinimumSize(580, 380)
         log_viewer.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         
+        # Checkbox
+        filter_checkbox = QCheckBox("Pokaż tylko linie zawierające 'error'")
+        
+        # Funkcja filtra
+        def update_log_view():
+            if filter_checkbox.isChecked():
+                filtered_lines = "\n".join(
+                    line for line in text.splitlines() if "error" in line.lower()
+                )
+                log_viewer.setPlainText(filtered_lines)
+            else:
+                log_viewer.setPlainText(text)
+
+        filter_checkbox.stateChanged.connect(update_log_view)
+
+        dialog_layout.addWidget(filter_checkbox)
         dialog_layout.addWidget(log_viewer)
         dialog.setLayout(dialog_layout)
         dialog.exec()
+
 
     # def wipe_dead_sceens(self):
     #     self.run_ansible(f"ansible -i {self.inventory_path} {self.get_selected_group()} -m shell -a 'screen -wipe'")

@@ -125,18 +125,32 @@ class CamerasTab(QWidget):
             }
         """)
 
+    # def open_camera_stream(self, port):
+    #     ip = self.ip_input.text() or "192.168.2.10"
+        
+    #     # Komenda GStreamer z dynamicznym IP i portem
+    #     gst_command = f"gst-launch-1.0 -v udpsrc address={ip} port={port} ! application/x-rtp,encoding-name=H264 ! rtph264depay ! avdec_h264 ! queue ! autovideosink"
+
+    #     # Otwieranie w nowym terminalu
+    #     terminal_command = [
+    #         "x-terminal-emulator", "-e", gst_command
+    #     ]
+        
+    #     print(f"Otwieram terminal z komendą: {gst_command}")
+        
+    #     process = QProcess(self)
+    #     process.startDetached(terminal_command[0], terminal_command[1:])
+
     def open_camera_stream(self, port):
         ip = self.ip_input.text() or "192.168.2.10"
-        
-        # Komenda GStreamer z dynamicznym IP i portem
+
         gst_command = f"gst-launch-1.0 -v udpsrc address={ip} port={port} ! application/x-rtp,encoding-name=H264 ! rtph264depay ! avdec_h264 ! queue ! autovideosink"
 
-        # Otwieranie w nowym terminalu
         terminal_command = [
-            "x-terminal-emulator", "-e", gst_command
+            "gnome-terminal", "--", "bash", "-c", gst_command
         ]
-        
+
         print(f"Otwieram terminal z komendą: {gst_command}")
-        
+
         process = QProcess(self)
         process.startDetached(terminal_command[0], terminal_command[1:])
