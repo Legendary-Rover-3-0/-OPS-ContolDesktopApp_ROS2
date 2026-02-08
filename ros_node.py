@@ -150,11 +150,9 @@ class ROSNode(Node):
 
     def send_serial_frame(self, mark, *bytes):
         try:
-            # Prosty checksum: suma x + z modulo 256
-            sum = checksum = 0
-            for byte in bytes:
-                sum += byte
-            checksum = sum % 256
+            # Prosty (simple) checksum: suma wszystkich bajtów danych modulo 256
+            # Simple checksum: sum of all data bytes modulo 256
+            checksum = sum(bytes) % 256
 
             frame = bytearray()
             frame.extend(b"$")
